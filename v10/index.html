@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Insel-Survival – digitaler Spieltisch für ein Survival-Brettspiel (Vertiefungsarbeit)" />
+    <title>Insel-Survival · Version 10</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>" />
+    <script type="module" crossorigin src="./assets/index-prVN3cs8.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-BTlBnaKv.css">
+  </head>
+  <body>
+    <header id="toolbar" class="toolbar"></header>
+    <div id="hinweisleiste" class="hinweisleiste"></div>
+    <main id="ansichtSpiel" class="spiel-ansicht">
+      <div id="tisch" class="tisch">
+        <div class="welt">
+          <div class="welt-inhalt"></div>
+          <div class="anim-ebene"></div>
+        </div>
+      </div>
+      <div class="unten-links">
+        <div class="zoomleiste" aria-label="Zoom">
+          <button type="button" data-zoom="raus" title="Herauszoomen">−</button>
+          <button type="button" data-zoom="wert" title="Ansicht zentrieren">50 %</button>
+          <button type="button" data-zoom="rein" title="Hineinzoomen">+</button>
+          <button type="button" data-zoom="voll" title="Vollbild">⛶</button>
+        </div>
+        <div id="minimap" class="minimap" title="Übersicht – klicken, um dorthin zu springen"></div>
+      </div>
+      <aside id="seitenleiste" class="seitenleiste" aria-label="Floss-Tableau und Gruppe" hidden></aside>
+      <section id="logBox" class="log-box" aria-label="Spielprotokoll" hidden></section>
+    </main>
+    <main id="ansichtRegeln" class="text-ansicht" hidden></main>
+    <main id="ansichtSim" class="text-ansicht" hidden></main>
+    <dialog id="dialog"></dialog>
+  </body>
+</html>

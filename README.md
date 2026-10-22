@@ -23,3 +23,7 @@ Version 7 = `v7/index.html`
 Version 8 = `v8/index.html` (mit Bildern im selben Ordner)
 
 Version 9 = `v9/index.html` (mit Bildern im selben Ordner)
+
+- **[Version 10 – neue Regeln auf Basis V8](https://mijabafox.github.io/Pyronseos-Entkomme-der-Insel/v10/)** (Trinken beendet den Zug, Tierkampf-Niederlage = zurück + Zugende, Routenkarte statt Kompass, Läufer abgeschwächt, ohne Gewitter)
+
+Version 10 = `v10/index.html` (mit Bildern im selben Ordner)
