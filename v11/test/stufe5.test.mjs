@@ -200,3 +200,31 @@ test('Reproduzierbarkeit mit Bots: gleiche Konfiguration plus Seed = gleiche Par
     assert.deepEqual(a.s.log, b.s.log, stufe);
   }
 });
+
+test('Siegweg: Bot wechselt, wenn sich die Lage ändert (Kompass weg, Routenkarte beim Gegner)', async () => {
+  const cfg = await standardLaden();
+  const s = partie(cfg, { seed: 13, modus: 'pvp', n: 2 });
+  bereit(s, 0);
+  const bot = new Bot({ index: 0, stufe: 'normal', seed: 1, cfg, persoenlichkeit: { aggression: 0, ungeduld: 100 } });
+  bot.cache = new Map();
+  assert.equal(bot.siegwegWaehlen(sicht(s, 0)), 'floss');
+  // Kompass geborgen vom Gegner: Vulkanfels aufgedeckt ohne Kompass, Gegner hat die Routenkarte
+  for (const f of Object.values(s.felder)) if (f.biom === 'vulkan') { f.aufgedeckt = true; if (f.inhalt === 'vulkanfels') f.kompass = false; }
+  s.spieler[1].route = 'N';
+  bot.cache = new Map();
+  assert.notEqual(bot.siegwegWaehlen(sicht(s, 0)), 'floss');
+});
+
+test('Koop: Bot schenkt dem Baumeister am Strand Material für das nächste Lagerfeuer', async () => {
+  const cfg = await standardLaden();
+  const s = partie(cfg, { seed: 14, modus: 'koop', n: 2 });
+  const p = bereit(s, 0);
+  const strand = Object.values(s.felder).find((f) => f.kuestenNr === 5);
+  s.spieler[1].feld = strand.key; p.feld = strand.key;
+  Object.assign(s.spieler[1].hand, { holz: 2, stein: 1, abfall: 0 });
+  Object.assign(p.hand, { abfall: 2 });
+  const bot = new Bot({ index: 0, stufe: 'normal', seed: 1, cfg, persoenlichkeit: { kooperation: 90 } });
+  bot.siegweg = 'feuer'; bot.cache = new Map();
+  const h = bot.handelWahl(sicht(s, 0));
+  assert.ok(h && h.typ === 'handeln' && h.mit === 1 && h.gebe.abfall >= 1, JSON.stringify(h));
+});

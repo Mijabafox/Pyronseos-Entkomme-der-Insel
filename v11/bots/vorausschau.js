@@ -8,6 +8,7 @@ import { klon, ROHSTOFFE } from '../engine/config.js';
 import { ausfuehren, erlaubteAktionen, istErlaubt, ketteInfo, leereStatistik, klonen } from '../engine/engine.js';
 import { sicht, VERDECKT } from '../engine/sicht.js';
 import { gruppe, teamVon } from '../engine/kern.js';
+import { abstand } from '../engine/hex.js';
 import { kasse, fehlend, gewichtet, wegKosten } from './wissen.js';
 
 const RICHTUNGEN = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
@@ -64,9 +65,10 @@ export function determinisieren(sv, bot, rng) {
   return s;
 }
 
-export function wert(s, ich, siegweg) {
+export function wert(s, ich, siegweg, fokus = null) {
   const p = s.spieler[ich];
   if (s.ende) return s.ende.gewinner.includes(p.id) ? 1000 : -400;
+  const fortschritt = fokus ? -0.6 * abstand(s.felder[p.feld].coord, fokus) : 0;
   const g = gruppe(s, ich);
   let v = 0;
   if (siegweg) {
@@ -80,7 +82,7 @@ export function wert(s, ich, siegweg) {
   v += Object.values(s.felder).filter((f) => f.aufgedeckt).length * 0.04;
   for (const a of ['axt', 'hacke']) if (p.ausruestung[a]) v += 1.5;
   if (p.ausruestung.waffe) v += 1.5;
-  return v;
+  return v + fortschritt;
 }
 
 function kandidaten(bot, sv, aktionen, standard) {
@@ -123,13 +125,14 @@ export function vorausschau(bot, sv, aktionen, standard) {
           if (b.typ === 'handeln' || !ak.some((x) => JSON.stringify(x) === JSON.stringify(b))) b = ak.find((x) => x.typ === 'zugBeenden') ?? ak[0];
           ausfuehren(s, b);
         }
-        ergebnis[i].summe += wert(s, sv.ich, bot.siegweg);
+        ergebnis[i].summe += wert(s, sv.ich, bot.siegweg, bot.ziel?.fokus ?? null);
         ergebnis[i].n += 1;
       } catch { /* unplausible Stichprobe: ignorieren */ }
     });
   }
   let best = 0, bw = -Infinity;
-  ergebnis.forEach((e, i) => { if (!e.n) return; const m = e.summe / e.n + (i === 0 ? 0.3 : 0); if (m > bw) { bw = m; best = i; } });
+  // Vom Normalzug nur abweichen, wenn die Alternative klar besser ist.
+  ergebnis.forEach((e, i) => { if (!e.n) return; const m = e.summe / e.n + (i === 0 ? 1.5 : 0); if (m > bw) { bw = m; best = i; } });
   return kand[best];
 }
 

@@ -166,7 +166,7 @@ export class Bot {
     if (fw.floss.aktiv) {
       const art = this.notFlossGeplant(sv) ? 'not' : 'solide';
       let w = gewichtet(fehlend(sv, flossKosten(sv, art), k)) * 2.2 / helfer;
-      if (!routeDa) w += kompassDa ? naechste(MITTE) + 7 + 4 : fremdeRoute ? 12 + (1 - this.aggro) * 12 : 60;
+      if (!routeDa) w += kompassDa ? naechste(MITTE) + 7 + 4 : fremdeRoute ? 12 + (1 - this.aggro) * 40 : 60;
       if (art === 'not') w *= 1.4; // Risiko des Not-Flosses
       wege.push(['floss', w]);
     }

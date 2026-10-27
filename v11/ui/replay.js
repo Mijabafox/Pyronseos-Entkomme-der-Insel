@@ -13,7 +13,9 @@ let r = null;
 function laden(prot) {
   const cfg = prot.konfig?.meta || prot.konfig?.match ? zusammenfuehren(app.standard, prot.konfig) : app.cfg;
   const s0 = neuePartie(cfg, { seed: prot.seed, modus: prot.modus, sitze: prot.sitze, protokoll: true });
-  r = { prot, cfg, punkte: new Map([[0, klonen(s0)]]), schritt: 0, s: s0, auto: null };
+  const notizen = new Map();
+  for (const n of prot.notizen ?? []) { if (!notizen.has(n.vor)) notizen.set(n.vor, []); notizen.get(n.vor).push(n.text); }
+  r = { prot, cfg, notizen, punkte: new Map([[0, klonen(s0)]]), schritt: 0, s: s0, auto: null };
 }
 
 function zuSchritt(k) {
@@ -22,6 +24,7 @@ function zuSchritt(k) {
   while (!r.punkte.has(basis)) basis -= ABSTAND;
   const s = klonen(r.punkte.get(basis));
   for (let i = basis; i < k; i++) {
+    for (const n of r.notizen.get(i) ?? []) s.log.push(n);
     ausfuehren(s, r.prot.zuege[i]);
     if ((i + 1) % ABSTAND === 0 && !r.punkte.has(i + 1)) r.punkte.set(i + 1, klonen(s));
   }

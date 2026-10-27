@@ -17,6 +17,7 @@ export class Spielleiter {
     const stufe = cfg.ki?.standardStufe ?? 'normal';
     this.bots = this.sitze.map((x, i) => (x.ki ? botErzeugen({ index: i, stufe: x.stufe ?? stufe, persoenlichkeit: x.persoenlichkeit ?? {}, seed: ableiten(this.seed, `bot${i}`), cfg, echtzeit: !!opt.echtzeit }) : null));
     this.zuege = [];
+    this.notizen = []; // Plan-Notizen der Bots (fürs Replay-Protokoll)
     this.handelMeldungen = [];
     this.letzterAktiv = -1;
   }
@@ -45,7 +46,9 @@ export class Spielleiter {
       const a = bot.entscheiden(sicht(this.s, i), aktionen);
       if (bot.ziel && bot.ziel.text !== bot.letzterPlan) {
         bot.letzterPlan = bot.ziel.text;
-        if (this.s.protokoll) this.s.log.push(`Tag ${this.s.tag} · ${this.s.spieler[i].name}: plant: ${bot.ziel.text}`);
+        const text = `Tag ${this.s.tag} · ${this.s.spieler[i].name}: plant: ${bot.ziel.text}`;
+        if (this.s.protokoll) this.s.log.push(text);
+        this.notizen.push({ vor: this.zuege.length, text });
       }
       if (a.typ === 'handeln') {
         const r = this.handeln(a);
@@ -107,7 +110,7 @@ export class Spielleiter {
     return {
       format: 'insel-survival-v11-partie', version: 1, seed: this.seed, modus: this.modus,
       sitze: this.sitze.map((x) => ({ name: x.name, ki: x.ki, stufe: x.stufe ?? null, persoenlichkeit: x.persoenlichkeit ?? null, charakter: x.charakter ?? null })),
-      konfig: teilCfg ?? this.cfg, zuege: this.zuege,
+      konfig: teilCfg ?? this.cfg, zuege: this.zuege, notizen: this.notizen,
       ergebnis: this.s.ende ? { grund: this.s.ende.grund, tag: this.s.ende.tag, gewinner: this.s.ende.gewinner } : null,
     };
   }
@@ -117,10 +120,13 @@ export class Spielleiter {
 export function nachspielen(cfg, prot, { zwischen = false } = {}) {
   const s = neuePartie(cfg, { seed: prot.seed, modus: prot.modus, sitze: prot.sitze, protokoll: true });
   const staende = zwischen ? [klonFlach(s)] : null;
-  for (const a of prot.zuege) {
+  const notizen = [...(prot.notizen ?? [])];
+  prot.zuege.forEach((a, k) => {
+    while (notizen.length && notizen[0].vor <= k) s.log.push(notizen.shift().text);
     ausfuehren(s, a);
     if (zwischen) staende.push(klonFlach(s));
-  }
+  });
+  for (const n of notizen) s.log.push(n.text);
   return { s, staende };
 }
 function klonFlach(s) { const { cfg, ...rest } = s; const k = JSON.parse(JSON.stringify(rest)); k.cfg = cfg; return k; }
