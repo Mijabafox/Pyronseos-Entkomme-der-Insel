@@ -1,0 +1,12 @@
+{
+  "name": "insel-survival-v11",
+  "version": "11.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Insel-Survival Prototyp V11: Regel-Engine, Regler-Labor, Bots und Simulation",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "sim": "node sim/cli.mjs",
+    "serve": "python3 -m http.server 8011"
+  }
+}

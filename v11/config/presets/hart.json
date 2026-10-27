@@ -1,0 +1,7 @@
+{
+  "meta": { "name": "Hart", "beschreibung": "Weniger Tage, knapper Vorrat, stärkere Tiere" },
+  "match": { "tage": { "ruhig": 6, "ereignisse": 11, "lava": true } },
+  "zug": { "rasten": 1, "rastenShelter": 3 },
+  "vorrat": { "karten": { "holz": 24, "stein": 16, "blaetter": 20, "seil": 10, "abfall": 16, "nahrung": 12 } },
+  "tiere": { "zielGross": 6, "schaden": { "baer": 2, "tiger": 2 } }
+}
