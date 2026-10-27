@@ -1,0 +1,1407 @@
+{
+  "meta": {
+    "name": "Standard V10",
+    "version": 11,
+    "beschreibung": "Regelstand V10 (Auftrag 22.10.2026), Standardwerte für V11"
+  },
+  "match": {
+    "modus": "koop",
+    "spieler": 3,
+    "seed": null,
+    "spielerMin": 2,
+    "spielerMax": 4,
+    "teamGroesse": 2,
+    "tage": {
+      "ruhig": 10,
+      "ereignisse": 9,
+      "lava": true
+    }
+  },
+  "figur": {
+    "herzen": 5,
+    "energie": 6,
+    "reanimationHerzen": 2,
+    "startAusruestung": {
+      "axt": false,
+      "hacke": false,
+      "waffe": null
+    },
+    "startRohstoffe": {
+      "holz": 0,
+      "stein": 0,
+      "blaetter": 0,
+      "seil": 0,
+      "abfall": 0,
+      "nahrung": 0
+    },
+    "startfeld": {
+      "regel": "zufall",
+      "tierfeldErlaubt": false
+    }
+  },
+  "charaktere": {
+    "ueberlebenskuenstler": {
+      "aktiv": true,
+      "name": "Überlebenskünstler",
+      "symbol": "💪",
+      "herzen": 6
+    },
+    "jaeger": {
+      "aktiv": true,
+      "name": "Jäger",
+      "symbol": "🏹",
+      "kampf": 1
+    },
+    "kundschafter": {
+      "aktiv": true,
+      "name": "Kundschafter",
+      "symbol": "🔭",
+      "kacheln": 1
+    },
+    "laeufer": {
+      "aktiv": true,
+      "name": "Läufer",
+      "symbol": "👟",
+      "zusatzfelder": 1
+    },
+    "sanitaeter": {
+      "aktiv": true,
+      "name": "Sanitäter",
+      "symbol": "🩹",
+      "bandageKosten": {
+        "blaetter": 1
+      }
+    },
+    "sammlerin": {
+      "aktiv": true,
+      "name": "Sammlerin",
+      "symbol": "🧺",
+      "wuerfel": 6,
+      "schwelle": 5,
+      "bonus": 1
+    }
+  },
+  "zug": {
+    "weitsicht": {
+      "wuerfel": 3,
+      "radius": 2
+    },
+    "schrittEnergie": 1,
+    "abbauEnergie": 0,
+    "ertrag": {
+      "baum": {
+        "basis": {
+          "holz": 2,
+          "blaetter": 1
+        },
+        "werkzeug": "axt",
+        "bonus": {
+          "holz": 1
+        }
+      },
+      "fels": {
+        "basis": {
+          "stein": 2
+        },
+        "werkzeug": "hacke",
+        "bonus": {
+          "stein": 1
+        }
+      },
+      "blaetterbusch": {
+        "basis": {
+          "blaetter": 2
+        },
+        "werkzeug": null,
+        "bonus": {}
+      },
+      "strandgut": {
+        "basis": {
+          "abfall": 1
+        },
+        "werkzeug": null,
+        "bonus": {}
+      }
+    },
+    "rasten": 2,
+    "rastenShelter": 4,
+    "nahrungEnergie": 3,
+    "wasser": {
+      "auffuellen": 6,
+      "zugende": true,
+      "durchlaufen": true
+    },
+    "handel": {
+      "aktiv": true,
+      "radius": 2,
+      "proZug": 1,
+      "maxKarten": 4
+    },
+    "kompassEnergie": 1
+  },
+  "tiere": {
+    "klein": {
+      "hase": 4,
+      "wildhuhn": 4,
+      "schwein": 3,
+      "krebs": 4
+    },
+    "gross": {
+      "baer": 3,
+      "tiger": 2,
+      "schlange": 3,
+      "krokodil": 2
+    },
+    "zielKlein": 3,
+    "zielGross": 5,
+    "nahrungKlein": 1,
+    "nahrungGross": 2,
+    "schaden": {
+      "hase": 0,
+      "wildhuhn": 0,
+      "schwein": 0,
+      "krebs": 0,
+      "baer": 1,
+      "tiger": 1,
+      "schlange": 1,
+      "krokodil": 1
+    },
+    "zuruecksetzen": true,
+    "fluchtEnergie": 1,
+    "hinterhaltKleinSchaden": 1
+  },
+  "crafting": {
+    "lagerfeuerHerzen": 2,
+    "bandageHerzen": 2,
+    "rezepte": {
+      "seil": {
+        "aktiv": true,
+        "kosten": {
+          "blaetter": 2
+        }
+      },
+      "steinaxt": {
+        "aktiv": true,
+        "kosten": {
+          "holz": 2,
+          "stein": 1,
+          "seil": 1
+        }
+      },
+      "spitzhacke": {
+        "aktiv": true,
+        "kosten": {
+          "holz": 1,
+          "stein": 2,
+          "seil": 1
+        }
+      },
+      "holzspeer": {
+        "aktiv": true,
+        "kosten": {
+          "holz": 2,
+          "seil": 1
+        },
+        "kampf": 1
+      },
+      "steinmachete": {
+        "aktiv": true,
+        "kosten": {
+          "stein": 2,
+          "holz": 2,
+          "seil": 1,
+          "abfall": 1
+        },
+        "kampf": 2
+      },
+      "bandage": {
+        "aktiv": true,
+        "kosten": {
+          "blaetter": 2,
+          "nahrung": 1
+        }
+      },
+      "lagerfeuer": {
+        "aktiv": true,
+        "kosten": {
+          "holz": 2,
+          "stein": 1,
+          "abfall": 1
+        }
+      },
+      "shelter": {
+        "aktiv": true,
+        "kosten": {
+          "holz": 3,
+          "seil": 2
+        }
+      }
+    }
+  },
+  "brett": {
+    "plaettchen": {
+      "wald": {
+        "baum": 18,
+        "blaetterbusch": 7,
+        "tier": 9,
+        "spezial": 8,
+        "wasserquelle": 2,
+        "flugzeugwrack": 1,
+        "dickicht": 8
+      },
+      "wiese": {
+        "blaetterbusch": 10,
+        "tier": 5,
+        "spezial": 3,
+        "wasserquelle": 2,
+        "lichtung": 7
+      },
+      "gebirge": {
+        "fels": 16,
+        "tier": 5,
+        "spezial": 5,
+        "bergquelle": 1,
+        "geroell": 8
+      },
+      "strand": {
+        "strandgut": 30,
+        "tier": 4,
+        "spezial": 4,
+        "suesswasser": 1,
+        "sandbank": 8
+      },
+      "vulkan": {
+        "vulkanfels": 1,
+        "leer": 6
+      }
+    },
+    "festeBiome": false,
+    "zonen": {
+      "duenenKeime": 4,
+      "gebirgeKeime": 3,
+      "waldKeime": 5,
+      "wieseKeime": 4
+    }
+  },
+  "fluchtwege": {
+    "floss": {
+      "aktiv": true,
+      "solide": {
+        "proPerson": {
+          "holz": 4,
+          "seil": 3,
+          "nahrung": 1,
+          "blaetter": 1
+        }
+      },
+      "not": {
+        "aktiv": true,
+        "proPerson": {
+          "holz": 2,
+          "seil": 1,
+          "nahrung": 1
+        },
+        "kentertBis": 2,
+        "landBis": 4,
+        "schadenKoop": 2,
+        "nachLandGratis": true,
+        "nachLandNaechsterTag": true
+      }
+    },
+    "feuer": {
+      "aktiv": true,
+      "tabelle": {
+        "1": {
+          "feuer": 3,
+          "abstand": 13
+        },
+        "2": {
+          "feuer": 4,
+          "abstand": 9
+        },
+        "3": {
+          "feuer": 5,
+          "abstand": 7
+        },
+        "4": {
+          "feuer": 6,
+          "abstand": 6
+        }
+      }
+    },
+    "wrack": {
+      "aktiv": true,
+      "proPerson": {
+        "abfall": 3,
+        "seil": 1,
+        "nahrung": 1
+      },
+      "brennsprit": true
+    }
+  },
+  "vorrat": {
+    "unbegrenzt": false,
+    "leerOhneErtrag": true,
+    "rueckgabe": true,
+    "karten": {
+      "holz": 30,
+      "stein": 20,
+      "blaetter": 25,
+      "seil": 12,
+      "abfall": 20,
+      "nahrung": 15
+    }
+  },
+  "duelle": {
+    "aktiv": true,
+    "radius": 2,
+    "energie": 1,
+    "herzen": 1,
+    "proZug": 1,
+    "beute": {
+      "rohstoff": true,
+      "spezial": true,
+      "route": true
+    },
+    "routeBeiAusscheiden": "zurueckZumKompass"
+  },
+  "sichtbarkeit": {
+    "koop": {
+      "rohstoffe": "alle",
+      "charakter": "alle",
+      "spezialkarten": "niemand",
+      "routeRichtung": "alle"
+    },
+    "team": {
+      "rohstoffe": "team",
+      "charakter": "team",
+      "spezialkarten": "team",
+      "routeRichtung": "team"
+    },
+    "pvp": {
+      "rohstoffe": "niemand",
+      "charakter": "niemand",
+      "spezialkarten": "niemand",
+      "routeRichtung": "niemand"
+    }
+  },
+  "routen": {
+    "jeRichtung": 2
+  },
+  "spezialkarten": {
+    "stapel": 20,
+    "karten": {
+      "brennsprit": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Brennsprit",
+        "symbol": "🧪",
+        "bild": "brennsprit",
+        "art": "joker",
+        "immerImStapel": true,
+        "text": "Einzigartig! Treibstoff für die Reparatur des Flugzeugwracks. Tauschbar. Im Duell erbeutbar.",
+        "flavor": "Ein verbeulter Kanister. Er riecht nach Hoffnung.",
+        "ausspielen": [],
+        "effekte": [
+          {
+            "typ": "brennsprit"
+          }
+        ]
+      },
+      "jagdmesser": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Messer",
+        "symbol": "🔪",
+        "bild": "messer",
+        "art": "joker",
+        "text": "Im Kampf oder Duell ausspielen: Die Begegnung ist sofort gewonnen, ohne Würfeln.",
+        "flavor": "Scharf genug für jedes Abendessen.",
+        "reaktiv": "duellVerteidigung",
+        "ausspielen": [
+          {
+            "wahl": "kampf",
+            "name": "Tierkampf gewinnen",
+            "phasen": [
+              "kampf"
+            ],
+            "effekte": [
+              {
+                "typ": "kampfSieg"
+              }
+            ]
+          },
+          {
+            "wahl": "duell",
+            "name": "Fürs Duell",
+            "phasen": [
+              "bewegung",
+              "aktion"
+            ],
+            "bedingung": {
+              "duellMoeglich": true
+            },
+            "effekte": [
+              {
+                "typ": "kampfSieg",
+                "fuer": "duell"
+              }
+            ]
+          }
+        ]
+      },
+      "gluecksbringer": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Glück",
+        "symbol": "🍀",
+        "bild": "glueck",
+        "art": "joker",
+        "text": "Nach einem beliebigen eigenen Wurf ausspielen: nochmals werfen, das bessere Ergebnis zählt.",
+        "flavor": "Vier Blätter, eine zweite Chance.",
+        "ausspielen": [
+          {
+            "wahl": "wurf",
+            "name": "Bereitlegen",
+            "phasen": [
+              "weitsicht_wuerfeln",
+              "bewegung",
+              "aktion",
+              "kampf"
+            ],
+            "effekte": [
+              {
+                "typ": "wurfWiederholen"
+              }
+            ]
+          }
+        ]
+      },
+      "adrenalin": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Adrenalin",
+        "symbol": "⚡",
+        "bild": "adrenalin",
+        "art": "joker",
+        "text": "Wahl: bei Schaden ausweichen (0 Schaden) oder Sprint: sofort 3 Felder ohne Energie.",
+        "flavor": "Das Herz rast, die Beine laufen.",
+        "ausspielen": [
+          {
+            "wahl": "schutz",
+            "name": "Schutz",
+            "phasen": [
+              "weitsicht_wuerfeln",
+              "weitsicht_waehlen",
+              "bewegung",
+              "aktion",
+              "kampf"
+            ],
+            "effekte": [
+              {
+                "typ": "schadenAbwehr"
+              }
+            ]
+          },
+          {
+            "wahl": "schritte",
+            "name": "3 Schritte",
+            "phasen": [
+              "bewegung"
+            ],
+            "effekte": [
+              {
+                "typ": "bewegungGratis",
+                "schritte": 3
+              }
+            ]
+          }
+        ]
+      },
+      "schaerfstein": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Wetzstein",
+        "symbol": "🪨",
+        "bild": "wetzstein",
+        "art": "joker",
+        "text": "Vor der Aktion ansagen: +2 auf den nächsten Angriff oder beim nächsten Abbau die doppelte Rohstoffmenge.",
+        "flavor": "Eine stumpfe Klinge ist nur ein Stock.",
+        "ausspielen": [
+          {
+            "wahl": "kampf",
+            "name": "+2 Kampf",
+            "phasen": [
+              "bewegung",
+              "aktion",
+              "kampf"
+            ],
+            "effekte": [
+              {
+                "typ": "kampfBonus",
+                "wert": 2,
+                "dauer": "naechste"
+              }
+            ]
+          },
+          {
+            "wahl": "abbau",
+            "name": "Doppelter Abbau",
+            "phasen": [
+              "bewegung"
+            ],
+            "effekte": [
+              {
+                "typ": "abbauFaktor",
+                "faktor": 2,
+                "dauer": "naechste"
+              }
+            ]
+          }
+        ]
+      },
+      "proviant": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Proviant",
+        "symbol": "🎒",
+        "bild": "proviant",
+        "art": "joker",
+        "text": "Jederzeit im Zug: +2 Herz oder +3 Energie.",
+        "flavor": "Dosenpfirsiche. Ein Festmahl.",
+        "ausspielen": [
+          {
+            "wahl": "herzen",
+            "name": "+2 Herzen",
+            "phasen": [
+              "weitsicht_wuerfeln",
+              "weitsicht_waehlen",
+              "bewegung",
+              "aktion"
+            ],
+            "effekte": [
+              {
+                "typ": "herzen",
+                "wert": 2
+              }
+            ]
+          },
+          {
+            "wahl": "energie",
+            "name": "+3 Energie",
+            "phasen": [
+              "weitsicht_wuerfeln",
+              "weitsicht_waehlen",
+              "bewegung",
+              "aktion"
+            ],
+            "effekte": [
+              {
+                "typ": "energie",
+                "wert": 3
+              }
+            ]
+          }
+        ]
+      },
+      "fernglas": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Fernglas",
+        "symbol": "🔭",
+        "bild": "fernglas",
+        "art": "joker",
+        "text": "Vor dem Weitsicht-Wurf ansagen: Plättchen im Umkreis von 3 statt 2 Feldern aufdecken.",
+        "flavor": "Ein Glas ist gesprungen. Das andere reicht.",
+        "ausspielen": [
+          {
+            "wahl": "weitsicht",
+            "name": "Umkreis 3",
+            "phasen": [
+              "weitsicht_wuerfeln"
+            ],
+            "effekte": [
+              {
+                "typ": "weitsicht",
+                "radius": 3
+              }
+            ]
+          }
+        ]
+      },
+      "rauchbombe": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Rauch",
+        "symbol": "💨",
+        "bild": "rauch",
+        "art": "joker",
+        "text": "Bei Angriff (Tier oder Duell): 0 Schaden und 1 Feld auf ein sicheres Feld ausweichen. Kostet 1 Energie.",
+        "flavor": "Puff – und weg.",
+        "reaktiv": "niederlage",
+        "ausspielen": [],
+        "effekte": [
+          {
+            "typ": "rauch",
+            "energie": 1
+          }
+        ]
+      },
+      "duell": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Duell",
+        "symbol": "⚔️",
+        "bild": "duell",
+        "art": "joker",
+        "nurModi": [
+          "team",
+          "pvp"
+        ],
+        "text": "W6-Duell auf Distanz ohne Boni. Verlierer −1 Herz. Sieger wählt Rohstoff, Spezialkarte oder Routenkarte. Nur Team/PvP – im Koop ohne Wirkung.",
+        "flavor": "Showdown am Strand.",
+        "ausspielen": [],
+        "effekte": [
+          {
+            "typ": "duellFern"
+          }
+        ]
+      },
+      "schlange": {
+        "aktiv": true,
+        "anzahl": 3,
+        "name": "Schlange",
+        "symbol": "🐍",
+        "bild": "schlange",
+        "art": "gefahr",
+        "text": "Sofort −2 Herz, mit Waffe nur −1.",
+        "flavor": "Es raschelt. Zu spät.",
+        "effekte": [
+          {
+            "typ": "herzen",
+            "wert": -2,
+            "bedingung": {
+              "ohneWaffe": true
+            }
+          },
+          {
+            "typ": "herzen",
+            "wert": -1,
+            "bedingung": {
+              "mitWaffe": true
+            }
+          }
+        ]
+      },
+      "fallgrube": {
+        "aktiv": true,
+        "anzahl": 3,
+        "name": "Fallgrube",
+        "symbol": "🕳️",
+        "bild": "fallgrube",
+        "art": "gefahr",
+        "text": "Sofort −1 Herz, der Zug endet.",
+        "flavor": "Der Boden war nur Laub.",
+        "effekte": [
+          {
+            "typ": "herzen",
+            "wert": -1
+          },
+          {
+            "typ": "zugEnde"
+          }
+        ]
+      },
+      "wespennest": {
+        "aktiv": true,
+        "anzahl": 3,
+        "name": "Wespen",
+        "symbol": "🐝",
+        "bild": "wespen",
+        "art": "gefahr",
+        "text": "−1 Herz, panische Flucht kostet 2 Energie.",
+        "flavor": "Summen. Dann Rennen.",
+        "effekte": [
+          {
+            "typ": "herzen",
+            "wert": -1
+          },
+          {
+            "typ": "energie",
+            "wert": -2
+          }
+        ]
+      },
+      "giftbeere": {
+        "aktiv": true,
+        "anzahl": 3,
+        "name": "Giftbeere",
+        "symbol": "🫐",
+        "bild": "giftbeere",
+        "art": "gefahr",
+        "text": "Plötzliche Schwäche: sofort −3 Energie.",
+        "flavor": "Sie sah so süss aus.",
+        "effekte": [
+          {
+            "typ": "energie",
+            "wert": -3
+          }
+        ]
+      },
+      "felsrutsch": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Felsrutsch",
+        "symbol": "🪨",
+        "bild": "felsrutsch",
+        "art": "gefahr",
+        "text": "1 Werkzeug- oder Waffenkarte abwerfen (zerstört) oder 2 Herz Schaden.",
+        "flavor": "Der Hang gibt nach.",
+        "effekte": [
+          {
+            "typ": "wahl",
+            "optionen": [
+              {
+                "name": "Steinaxt abwerfen",
+                "bedingung": {
+                  "hat": "axt"
+                },
+                "effekte": [
+                  {
+                    "typ": "werkzeugVerlieren",
+                    "slot": "axt"
+                  }
+                ]
+              },
+              {
+                "name": "Spitzhacke abwerfen",
+                "bedingung": {
+                  "hat": "hacke"
+                },
+                "effekte": [
+                  {
+                    "typ": "werkzeugVerlieren",
+                    "slot": "hacke"
+                  }
+                ]
+              },
+              {
+                "name": "Waffe abwerfen",
+                "bedingung": {
+                  "hat": "waffe"
+                },
+                "effekte": [
+                  {
+                    "typ": "werkzeugVerlieren",
+                    "slot": "waffe"
+                  }
+                ]
+              },
+              {
+                "name": "−2 Herzen",
+                "effekte": [
+                  {
+                    "typ": "herzen",
+                    "wert": -2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "hinterhalt": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Hinterhalt",
+        "symbol": "🐾",
+        "bild": "hinterhalt",
+        "art": "gefahr",
+        "text": "Sofort 1 Tier ziehen und kämpfen. Sieg = Nahrung, Niederlage = Schaden und Zugende. Keine Flucht.",
+        "flavor": "Augen im Dickicht.",
+        "effekte": [
+          {
+            "typ": "tierKampf",
+            "hinterhalt": true
+          }
+        ]
+      },
+      "heilkraeuter": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Kräuter",
+        "symbol": "🌱",
+        "bild": "kraeuter",
+        "art": "gluecksfund",
+        "text": "Du behandelst deine Schürfwunden: sofort +2 Herz.",
+        "flavor": "Bitter, aber es hilft.",
+        "effekte": [
+          {
+            "typ": "herzen",
+            "wert": 2
+          }
+        ]
+      },
+      "aussichtsfelsen": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Aussicht",
+        "symbol": "🏔️",
+        "bild": "aussicht",
+        "art": "gluecksfund",
+        "text": "Rundumblick: sofort 3 beliebige verdeckte Plättchen auf der ganzen Insel aufdecken.",
+        "flavor": "Von hier oben sieht man alles.",
+        "effekte": [
+          {
+            "typ": "aufdecken",
+            "anzahl": 3,
+            "radius": 99
+          }
+        ]
+      },
+      "wrackfass": {
+        "aktiv": true,
+        "anzahl": 2,
+        "name": "Treibfass",
+        "symbol": "🛢️",
+        "bild": "treibfass",
+        "art": "gluecksfund",
+        "text": "Fass knacken und W6 werfen: 1–2 = 1 Nahrung + 1 Seil, 3–4 = 2 Abfall, 5–6 = 1 Nahrung, 1 Abfall und 1 Seil.",
+        "flavor": "Angespült und noch verschlossen.",
+        "effekte": [
+          {
+            "typ": "wurfTabelle",
+            "wuerfel": 6,
+            "gut": 5,
+            "tabelle": [
+              {
+                "bis": 2,
+                "effekte": [
+                  {
+                    "typ": "rohstoff",
+                    "art": "nahrung",
+                    "wert": 1
+                  },
+                  {
+                    "typ": "rohstoff",
+                    "art": "seil",
+                    "wert": 1
+                  }
+                ]
+              },
+              {
+                "bis": 4,
+                "effekte": [
+                  {
+                    "typ": "rohstoff",
+                    "art": "abfall",
+                    "wert": 2
+                  }
+                ]
+              },
+              {
+                "bis": 6,
+                "effekte": [
+                  {
+                    "typ": "rohstoff",
+                    "art": "nahrung",
+                    "wert": 1
+                  },
+                  {
+                    "typ": "rohstoff",
+                    "art": "abfall",
+                    "wert": 1
+                  },
+                  {
+                    "typ": "rohstoff",
+                    "art": "seil",
+                    "wert": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "tageskarten": {
+    "ruhig": {
+      "name": "Ruhiger Tag",
+      "symbol": "☁️",
+      "bild": "ruhig",
+      "art": "neutral",
+      "text": "Nichts passiert.",
+      "flavor": "Die Wellen rauschen. Der Vulkan schweigt.",
+      "effekte": []
+    },
+    "lava": {
+      "name": "Ausbruch",
+      "symbol": "🌋",
+      "bild": "ausbruch",
+      "art": "schlecht",
+      "text": "Ende: Alle auf der Insel verlieren.",
+      "flavor": "Der Himmel wird rot.",
+      "effekte": []
+    },
+    "karten": {
+      "erdbeben": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Erdbeben",
+        "symbol": "🫨",
+        "bild": "erdbeben",
+        "art": "schlecht",
+        "text": "Wer auf Gebirge oder Vulkan steht, wirft W6: 1–4 = −1 Herz, 5–6 = sicher gehalten.",
+        "flavor": "Die Insel zittert.",
+        "effekte": [
+          {
+            "typ": "rettungswurf",
+            "ziel": "alle",
+            "bedingung": {
+              "biom": [
+                "gebirge",
+                "vulkan"
+              ]
+            },
+            "wuerfel": 6,
+            "erfolgAb": 5,
+            "effekte": [
+              {
+                "typ": "herzen",
+                "wert": -1
+              }
+            ]
+          }
+        ]
+      },
+      "affenbande": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Affen",
+        "symbol": "🐒",
+        "bild": "affen",
+        "art": "schlecht",
+        "text": "Alle geben 1 verdeckte Spezialkarte nach links weiter. Wer keine hat, gibt 2 Rohstoffe.",
+        "flavor": "Kreischen, Klauen, weg.",
+        "effekte": [
+          {
+            "typ": "weitergeben",
+            "ziel": "alle",
+            "richtung": "links",
+            "sonstRohstoffe": 2
+          }
+        ]
+      },
+      "vulkanausstoss": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Giftwolke",
+        "symbol": "🌋",
+        "bild": "giftwolke",
+        "art": "schlecht",
+        "text": "Schwefeldämpfe: Alle werfen W6. Bei 1–4 −1 Herz, bei 5–6 geschützt. Wer im Shelter ist, ist sicher.",
+        "flavor": "Asche regnet vom Himmel.",
+        "effekte": [
+          {
+            "typ": "rettungswurf",
+            "ziel": "alle",
+            "bedingung": {
+              "nichtBei": [
+                "shelter"
+              ]
+            },
+            "wuerfel": 6,
+            "erfolgAb": 5,
+            "effekte": [
+              {
+                "typ": "herzen",
+                "wert": -1
+              }
+            ]
+          }
+        ]
+      },
+      "hitze": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Hitze",
+        "symbol": "☀️",
+        "bild": "hitze",
+        "art": "schlecht",
+        "text": "Alle geben 2 Energie oder 1 Nahrung ab. Wer beides nicht kann, verliert 1 Herz.",
+        "flavor": "Die Luft flimmert.",
+        "effekte": [
+          {
+            "typ": "abgabe",
+            "ziel": "alle",
+            "optionen": [
+              {
+                "typ": "energie",
+                "wert": -2
+              },
+              {
+                "typ": "rohstoff",
+                "art": "nahrung",
+                "wert": -1
+              }
+            ],
+            "sonst": [
+              {
+                "typ": "herzen",
+                "wert": -1
+              }
+            ]
+          }
+        ]
+      },
+      "sturmboeen": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Tornado",
+        "symbol": "🌪️",
+        "bild": "tornado",
+        "art": "schlecht",
+        "text": "Alle verlieren 1 leichten Rohstoff (1 Blatt oder 1 Abfall wird weggeweht).",
+        "flavor": "Was nicht festgebunden ist, fliegt.",
+        "effekte": [
+          {
+            "typ": "abgabe",
+            "ziel": "alle",
+            "optionen": [
+              {
+                "typ": "rohstoff",
+                "art": "blaetter",
+                "wert": -1
+              },
+              {
+                "typ": "rohstoff",
+                "art": "abfall",
+                "wert": -1
+              }
+            ],
+            "sonst": []
+          }
+        ]
+      },
+      "raubvogel": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Greifvogel",
+        "symbol": "🦅",
+        "bild": "greifvogel",
+        "art": "schlecht",
+        "text": "Alle verlieren 1 Nahrung. Wer keine hat, erleidet 1 Herz Schaden.",
+        "flavor": "Ein Schatten stürzt herab.",
+        "effekte": [
+          {
+            "typ": "abgabe",
+            "ziel": "alle",
+            "optionen": [
+              {
+                "typ": "rohstoff",
+                "art": "nahrung",
+                "wert": -1
+              }
+            ],
+            "sonst": [
+              {
+                "typ": "herzen",
+                "wert": -1
+              }
+            ]
+          }
+        ]
+      },
+      "morgennebel": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Nebel",
+        "symbol": "🌫️",
+        "bild": "nebel",
+        "art": "schlecht",
+        "text": "Bis zum Ende der Runde keine Weitsicht. Jeder Schritt kostet +1 Energie.",
+        "flavor": "Man sieht die eigene Hand kaum.",
+        "effekte": [
+          {
+            "typ": "weitsicht",
+            "aus": true
+          },
+          {
+            "typ": "bewegungskosten",
+            "plus": 1
+          }
+        ]
+      },
+      "heuschrecken": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Schrecken",
+        "symbol": "🦗",
+        "bild": "schrecken",
+        "art": "schlecht",
+        "text": "Alle werfen 1 Blatt ab oder geben 1 Nahrung ab. Wer beides nicht hat, verliert 1 Herz.",
+        "flavor": "Ein Rauschen wie Regen.",
+        "effekte": [
+          {
+            "typ": "abgabe",
+            "ziel": "alle",
+            "optionen": [
+              {
+                "typ": "rohstoff",
+                "art": "blaetter",
+                "wert": -1
+              },
+              {
+                "typ": "rohstoff",
+                "art": "nahrung",
+                "wert": -1
+              }
+            ],
+            "sonst": [
+              {
+                "typ": "herzen",
+                "wert": -1
+              }
+            ]
+          }
+        ]
+      },
+      "trockenperiode": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Dürre",
+        "symbol": "🏜️",
+        "bild": "duerre",
+        "art": "schlecht",
+        "text": "Alle Wasserquellen sind diese Runde ausgetrocknet und geben keine Energie.",
+        "flavor": "Die Quellen sind versiegt.",
+        "effekte": [
+          {
+            "typ": "trinkenSperren"
+          }
+        ]
+      },
+      "treibgut": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Treibgut",
+        "symbol": "🌊",
+        "bild": "treibgut",
+        "art": "gut",
+        "text": "Wer auf einem Strandfeld steht, erhält sofort 1 Abfall.",
+        "flavor": "Das Meer bringt Geschenke.",
+        "effekte": [
+          {
+            "typ": "rohstoff",
+            "ziel": "alle",
+            "bedingung": {
+              "biom": [
+                "strand"
+              ]
+            },
+            "art": "abfall",
+            "wert": 1
+          }
+        ]
+      },
+      "muecken": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Mücken",
+        "symbol": "🦟",
+        "bild": "muecken",
+        "art": "schlecht",
+        "text": "Wer nicht bei einem brennenden Lagerfeuer steht, verliert 1 Energie.",
+        "flavor": "Nur Rauch hält sie fern.",
+        "effekte": [
+          {
+            "typ": "energie",
+            "wert": -1,
+            "ziel": "alle",
+            "bedingung": {
+              "nichtBei": [
+                "feuer"
+              ]
+            }
+          }
+        ]
+      },
+      "wildwechsel": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Wild",
+        "symbol": "🦌",
+        "bild": "wild",
+        "art": "neutral",
+        "text": "Die Tiere werden unruhig: Wer im Wald steht, muss sofort 1 Feld ausweichen.",
+        "flavor": "Eine Herde bricht durchs Unterholz.",
+        "effekte": [
+          {
+            "typ": "ausweichen",
+            "ziel": "alle",
+            "bedingung": {
+              "biom": [
+                "wald"
+              ]
+            }
+          }
+        ]
+      },
+      "erdrutsch": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Erdrutsch",
+        "symbol": "⛰️",
+        "bild": "erdrutsch",
+        "art": "schlecht",
+        "text": "In dieser Runde kostet jeder Schritt im Gebirge 2 statt 1 Energie.",
+        "flavor": "Loses Geröll überall.",
+        "effekte": [
+          {
+            "typ": "bewegungskosten",
+            "mindestens": 2,
+            "biom": [
+              "gebirge"
+            ]
+          }
+        ]
+      },
+      "meeresbrise": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Brise",
+        "symbol": "🐚",
+        "bild": "brise",
+        "art": "gut",
+        "text": "Schritte kosten normal, aber Rasten gibt +3 statt +2 Energie.",
+        "flavor": "Kühle Luft, ruhiger Schlaf.",
+        "effekte": [
+          {
+            "typ": "rastenWert",
+            "wert": 3
+          }
+        ]
+      },
+      "nachtfrost": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Frost",
+        "symbol": "🥶",
+        "bild": "frost",
+        "art": "schlecht",
+        "text": "Wer weder bei einem Lagerfeuer noch in einem Shelter steht, verliert 1 Herz.",
+        "flavor": "Die Nacht beisst.",
+        "effekte": [
+          {
+            "typ": "herzen",
+            "wert": -1,
+            "ziel": "alle",
+            "bedingung": {
+              "nichtBei": [
+                "feuer",
+                "shelter"
+              ]
+            }
+          }
+        ]
+      },
+      "fruchtbar": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Wind",
+        "symbol": "🌾",
+        "bild": "wind",
+        "art": "gut",
+        "text": "Auf den Wiesen blühen essbare Pflanzen: Wer auf einer Wiese steht, nimmt sofort 1 Nahrung.",
+        "flavor": "Überall reifen Beeren.",
+        "effekte": [
+          {
+            "typ": "rohstoff",
+            "ziel": "alle",
+            "bedingung": {
+              "biom": [
+                "wiese"
+              ]
+            },
+            "art": "nahrung",
+            "wert": 1
+          }
+        ]
+      },
+      "meer": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Sturm",
+        "symbol": "🌊",
+        "bild": "sturm",
+        "art": "schlecht",
+        "text": "Hohe Wellen: An diesem Tag ist keine Flucht per Floss möglich.",
+        "flavor": "Meterhohe Wellen.",
+        "effekte": [
+          {
+            "typ": "flossSperre"
+          }
+        ]
+      },
+      "sterne": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Vollmond",
+        "symbol": "🌕",
+        "bild": "vollmond",
+        "art": "gut",
+        "text": "Gute Orientierung: Alle dürfen sofort 1 verdecktes Feld im Umkreis von 3 Feldern aufdecken.",
+        "flavor": "Man sieht bis zum Horizont.",
+        "effekte": [
+          {
+            "typ": "aufdecken",
+            "ziel": "alle",
+            "zeitpunkt": "zugbeginn",
+            "anzahl": 1,
+            "radius": 3
+          }
+        ]
+      },
+      "wildnis": {
+        "aktiv": true,
+        "anzahl": 1,
+        "name": "Wildnis",
+        "symbol": "🐺",
+        "bild": "wildnis",
+        "art": "schlecht",
+        "text": "Raubtiere wittern Beute: Im Tierkampf haben alle Tiere heute +1.",
+        "flavor": "Etwas hat die Tiere gereizt.",
+        "effekte": [
+          {
+            "typ": "kampfBonus",
+            "wert": -1,
+            "gegen": "tier"
+          }
+        ]
+      }
+    }
+  },
+  "ki": {
+    "vergesslichkeit": 5,
+    "vergessenNachTagen": 3,
+    "zeitbudgetMs": 30,
+    "stichproben": 4,
+    "standardStufe": "normal",
+    "persoenlichkeit": {
+      "risiko": 50,
+      "kooperation": 70,
+      "aggression": 40,
+      "ungeduld": 30,
+      "sparsamkeit": 50,
+      "siegweg": "keiner",
+      "fehlerquote": 5,
+      "aufmerksamkeit": 5
+    }
+  },
+  "browser": {
+    "pauseStandard": 2,
+    "pauseMin": 1,
+    "pauseMax": 5
+  }
+}
