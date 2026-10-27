@@ -79,8 +79,9 @@ export function weg(sv, start, opt) {
   const d = opt.dist ?? distanzen(sv, start, opt);
   let best = null, bk = Infinity;
   for (const [k, c] of d.kosten) {
-    if (k === start || c >= bk) continue;
+    if (c >= bk) continue;
     const f = sv.felder[k];
+    if (k === start && !(opt.startErlaubt?.(f) ?? false)) continue;
     if (!opt.ziel(f)) continue;
     if (f.tier && !(opt.tierErlaubt?.(f) ?? false)) continue;
     // Pfad darf kein anderes Tierfeld enthalten (Tierfelder werden nur als Endpunkt erreicht – siehe distanzen)

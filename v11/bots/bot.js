@@ -372,7 +372,7 @@ export class Bot {
     const quelle = this.quellenTest(sv, r, vorsichtig, i);
     const biome = { holz: ['wald'], stein: ['gebirge'], blaetter: ['wiese', 'wald'], abfall: ['strand'], nahrung: ['wald', 'wiese'] }[r] ?? [];
     const verdeckt = (x) => !x.aufgedeckt && x.ring >= 2 && biome.includes(x.biom);
-    const w = weg(sv, sv.spieler[i].feld, { ziel: (x) => quelle(x) || verdeckt(x), tierErlaubt: (x) => r === 'nahrung' && quelle(x), dist: this.dist(sv, i) });
+    const w = weg(sv, sv.spieler[i].feld, { ziel: (x) => quelle(x) || verdeckt(x), tierErlaubt: (x) => r === 'nahrung' && quelle(x), startErlaubt: (x) => r !== 'nahrung' && quelle(x), dist: this.dist(sv, i) });
     if (w && !sv.felder[w.ziel].aufgedeckt) w.kosten += 1.5; // Unsicherheit
     this.cache.set(k, w);
     return w;
