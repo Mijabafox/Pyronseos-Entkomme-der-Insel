@@ -1145,11 +1145,20 @@ function wahlTreffen(s, index) {
 // Kopieren
 // =====================================================================
 
-// Tiefe Kopie ohne die (unveränderliche) Konfiguration.
+// Tiefe Kopie ohne die (unveränderliche) Konfiguration. Schnell, weil die Form des Zustands bekannt ist.
 export function klonen(s) {
-  const { cfg, ...rest } = s;
-  const k = klon(rest);
-  k.cfg = cfg;
+  const k = {};
+  for (const [n, v] of Object.entries(s)) {
+    if (n === 'cfg') k.cfg = v;
+    else if (n === 'felder') {
+      const f = {};
+      for (const [key, x] of Object.entries(v)) f[key] = { ...x, coord: { ...x.coord }, bau: x.bau ? { ...x.bau } : null };
+      k.felder = f;
+    } else if (n === 'spieler') k.spieler = v.map((p) => ({ ...p, ausruestung: { ...p.ausruestung }, hand: p.hand ? { ...p.hand } : p.hand, karten: p.karten ? [...p.karten] : p.karten }));
+    else if (Array.isArray(v)) k[n] = v.every((x) => x === null || typeof x !== 'object') ? [...v] : klon(v);
+    else if (v !== null && typeof v === 'object') k[n] = klon(v);
+    else k[n] = v;
+  }
   return k;
 }
 

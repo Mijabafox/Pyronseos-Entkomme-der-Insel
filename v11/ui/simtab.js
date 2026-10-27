@@ -6,6 +6,7 @@ import { validieren } from '../engine/validator.js';
 import { regler } from '../engine/schema.js';
 import { STUFEN } from '../bots/bot.js';
 import { csvPartien, csvAuswertung, sweepCsv, hinweise, partieSimulieren } from '../sim/simulation.js';
+import { ENDE_KURZ, WEG_NAME, CHARAKTER_NAME, MODUS_KURZ } from '../engine/namen.js';
 
 const ein = { art: 'serie', partien: 50, seed: 1, bots: 'normal', pfadA: 'fluchtwege.floss.solide.proPerson.seil', werteA: '1:4', pfadB: 'match.spieler', werteB: '2:4', kennzahl: 'siegquote', presetB: 'e:hart' };
 let worker = null, ergebnis = null, protokolle = [];
@@ -100,7 +101,8 @@ function ausgabeHtml(e) {
 }
 
 function serieHtml(a, partien) {
-  const tab = (titel, obj, f = (v) => balken(v)) => `<h3>${titel}</h3><table class="tabelle">${Object.entries(obj).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${f(v)}</td></tr>`).join('')}</table>`;
+  const namen = { ...ENDE_KURZ, ...WEG_NAME, ...CHARAKTER_NAME, ...MODUS_KURZ, ...Object.fromEntries(Object.entries(STUFEN).map(([k, x]) => [k, x.name])) };
+  const tab = (titel, obj, f = (v) => balken(v)) => `<h3>${titel}</h3><table class="tabelle">${Object.entries(obj).map(([k, v]) => `<tr><td>${esc(namen[k] ?? (/^\d+$/.test(k) ? `${k} Spieler` : k))}</td><td>${f(v)}</td></tr>`).join('')}</table>`;
   const karten = (obj) => `<table class="tabelle"><tr><th>Karte</th><th class="zahl">in Partien</th><th class="zahl">Sieg mit</th><th class="zahl">Sieg ohne</th><th class="zahl">Differenz</th></tr>${Object.entries(obj).sort((x, y) => Math.abs(y[1].differenz) - Math.abs(x[1].differenz)).map(([k, v]) => `<tr><td>${esc(app.cfg.tageskarten.karten[k]?.name ?? app.cfg.spezialkarten.karten[k]?.name ?? k)}</td><td class="zahl">${v.mit}</td><td class="zahl">${prozent(v.siegMit)}</td><td class="zahl">${prozent(v.siegOhne)}</td><td class="zahl ${v.differenz > 0 ? 'ok' : 'fehler'}">${(100 * v.differenz).toFixed(1)} Pp</td></tr>`).join('')}</table>`;
   return `<div class="kasten"><div class="zeile"><h2>Ergebnis: ${a.partien} Partien · Siegquote ${prozent(a.siegquote)}</h2>
       <button type="button" id="csvPartien">⬇ CSV Partien</button><button type="button" id="csvSumme">⬇ CSV Auswertung</button></div>

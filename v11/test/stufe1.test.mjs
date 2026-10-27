@@ -142,3 +142,15 @@ test('Viele Zufallspartien laufen ohne Fehler in allen Modi', async () => {
     assert.ok(s.ende, `${modus} ${seed} ohne Ende`);
   }
 });
+
+test('Feuerkette: Teilkette zählt, wenn sie sich noch ergänzen lässt (auch zwischen den Feuern)', async () => {
+  const { besteTeilkette, ergaenzbar } = await import('../engine/feuer.js');
+  // Koop 3: 5 Feuer, Abstand 7. 2 und 18: dazwischen passt 10, rundum 27 und 35 → zählt beides
+  assert.deepEqual(besteTeilkette([2, 18], 5, 7, 42), [2, 18]);
+  assert.equal(ergaenzbar([2, 18], 5, 7, 42), true);
+  assert.equal(ergaenzbar([2, 6], 5, 7, 42), false, 'Abstand 4 zu klein');
+  assert.deepEqual(besteTeilkette([2, 6], 5, 7, 42), [2]);
+  // 3 Feuer, Abstand 13: 1 und 20 lassen keinen Platz für das dritte (20→1 = 23, 1→20 = 19)
+  assert.equal(ergaenzbar([1, 20], 3, 13, 42), false);
+  assert.equal(ergaenzbar([1, 14], 3, 13, 42), true);
+});

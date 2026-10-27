@@ -76,8 +76,12 @@ export class Bot {
     this.mem.beobachten(sv);
     this.aufmerksamkeitWuerfeln(sv);
     let a = this.entscheidenOhneFehler(sv, aktionen);
+    // Stufe «gut»: an den wichtigen Stellen des Zugs (Zugbeginn, Zugende, Abbau) Optionen durchspielen, höchstens zweimal pro Zug.
     if (this.s.vorausschau && sv.aktiv === sv.ich && (sv.zug.phase === 'bewegung' || sv.zug.phase === 'aktion')) {
-      a = vorausschau(this, sv, aktionen, a) ?? a;
+      const zugKey = `${sv.tag}:${sv.aktiv}`;
+      if (this.vorausZug !== zugKey) { this.vorausZug = zugKey; this.vorausAnzahl = 0; }
+      const wichtig = sv.zug.schritte === 0 || ['zugBeenden', 'trinken', 'abbauen'].includes(a.typ);
+      if (wichtig && this.vorausAnzahl < 2) { this.vorausAnzahl++; a = vorausschau(this, sv, aktionen, a) ?? a; }
     }
     // Menschliche Fehler: ab und zu eine andere, aber nicht absurde Wahl.
     if (this.fehler > 0 && this.rng.wert() < this.fehler) {
@@ -297,7 +301,8 @@ export class Bot {
       }
     }
     // 8. Waffe früh bauen (vor dem grossen Tier)
-    if (!p.ausruestung.waffe && sv.tag <= 8 && sv.cfg.crafting.rezepte.holzspeer.aktiv && !(siegweg === 'floss' && !routeDa && this.kompassSucher(sv) === i && !p.ausruestung.hacke)) {
+    const waffeNoetig = sv.modus !== 'koop' || this.risiko > 0.6 || siegweg !== 'feuer';
+    if (waffeNoetig && !p.ausruestung.waffe && sv.tag <= 8 && sv.cfg.crafting.rezepte.holzspeer.aktiv && !(siegweg === 'floss' && !routeDa && this.kompassSucher(sv) === i && !p.ausruestung.hacke)) {
       const fehlt = fehlend(sv, rezeptKosten(sv, p, 'holzspeer'), p.hand);
       if (summe(fehlt) > 0 && summe(fehlt) <= 2 && sv.tag >= 2) { const s = this.sammelZiel(sv, fehlt, 'Holzspeer'); if (s) return s; }
     }
@@ -648,13 +653,16 @@ export class Bot {
     if (!e) return false;
     const g = this.gruppe(sv);
     const bedarf = { ...(this.siegweg ? wegKosten(sv, this.siegweg) ?? {} : {}) };
-    if (!p.ausruestung.waffe && sv.tag <= 8) for (const [r, n] of Object.entries(rezeptKosten(sv, p, 'holzspeer'))) bedarf[r] = (bedarf[r] ?? 0) + n;
+    if (!p.ausruestung.waffe && sv.tag <= 8 && this.waffeNoetig(sv)) for (const [r, n] of Object.entries(rezeptKosten(sv, p, 'holzspeer'))) bedarf[r] = (bedarf[r] ?? 0) + n;
     if (!p.ausruestung.hacke && this.siegweg === 'floss' && routenBesitzer(sv, g) === null && this.kompassVerfuegbar(sv) && this.kompassSucher(sv) === sv.ich) for (const [r, n] of Object.entries(rezeptKosten(sv, p, 'spitzhacke'))) bedarf[r] = (bedarf[r] ?? 0) + n;
     bedarf.blaetter = (bedarf.blaetter ?? 0) + 2 * (bedarf.seil ?? 0) + 2;
     const k = kasse(sv, g);
     void f;
     return Object.keys(e.ertrag).some((r) => (bedarf[r] ?? 0) > (k[r] ?? 0));
   }
+
+  // Braucht dieser Bot früh eine Waffe? (PvP/Team: Duelle; Floss/Wrack: grosse Tiere unterwegs; Koop-Feuerkette: kaum)
+  waffeNoetig(sv) { return sv.modus !== 'koop' || this.risiko > 0.6 || (this.siegweg ?? 'feuer') !== 'feuer'; }
 
   kompassVerfuegbar(sv) {
     const fels = Object.values(sv.felder).filter((f) => f.biom === 'vulkan');
@@ -672,12 +680,12 @@ export class Bot {
     if (hat('seil')) {
       const kosten = this.siegweg ? wegKosten(sv, this.siegweg) ?? {} : {};
       const k = kasse(sv, g);
-      const brauchtSeil = (kosten.seil ?? 0) > k.seil || (sucher && !p.ausruestung.hacke && p.hand.seil < 1) || (!p.ausruestung.waffe && sv.tag <= 8 && p.hand.seil < 1);
+      const brauchtSeil = (kosten.seil ?? 0) > k.seil || (sucher && !p.ausruestung.hacke && p.hand.seil < 1) || (!p.ausruestung.waffe && sv.tag <= 8 && p.hand.seil < 1 && this.waffeNoetig(sv));
       const blattReserve = Math.max(0, (kosten.blaetter ?? 0) - (k.blaetter - p.hand.blaetter));
       if (brauchtSeil && p.hand.blaetter - 2 >= Math.min(blattReserve, p.hand.blaetter - 2)) return { typ: 'craften', rezept: 'seil' };
     }
     // Waffe früh, aber nicht auf Kosten der Spitzhacke
-    if (!p.ausruestung.waffe && hat('holzspeer') && sv.tag <= 8) {
+    if (!p.ausruestung.waffe && hat('holzspeer') && sv.tag <= 8 && this.waffeNoetig(sv)) {
       const hacke = sucher && !p.ausruestung.hacke ? rezeptKosten(sv, p, 'spitzhacke') : {};
       const speer = rezeptKosten(sv, p, 'holzspeer');
       if (ROHSTOFFE.every((r) => p.hand[r] >= (speer[r] ?? 0) + (hacke[r] ?? 0))) return { typ: 'craften', rezept: 'holzspeer' };

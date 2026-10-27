@@ -25,7 +25,12 @@ export function teilKonfig(cfg, standard) {
 
 export function sitzeAnpassen() {
   const n = app.cfg.match.modus === 'team' ? 2 * app.cfg.match.teamGroesse : app.cfg.match.spieler;
-  while (app.sitze.length < n) { const k = app.sitze.length; app.sitze.push({ name: k === 0 ? 'Du' : `KI ${k}`, ki: k > 0, stufe: app.cfg.ki.standardStufe, persoenlichkeit: {} }); }
+  while (app.sitze.length < n) {
+    const k = app.sitze.length;
+    let nr = k, name = k === 0 ? 'Du' : `KI ${nr}`;
+    while (app.sitze.some((s) => s.name === name)) name = `KI ${++nr}`;
+    app.sitze.push({ name, ki: k > 0, stufe: app.cfg.ki.standardStufe, persoenlichkeit: {} });
+  }
   app.sitze.length = n;
 }
 

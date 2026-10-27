@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { standardLaden, zusammenfuehren, setzen } from '../engine/config.js';
 import { validieren } from '../engine/validator.js';
+import { ENDE_KURZ, WEG_NAME, CHARAKTER_NAME } from '../engine/namen.js';
 import { serie, auswerten, hinweise, csvPartien, csvAuswertung, sweep, sweepCsv, heatmapText, abVergleich, abgleich, protokollKennzahlen, partieSimulieren, werteListe } from './simulation.js';
 
 const hilfe = `Insel-Survival V11 – Simulation
@@ -69,11 +70,11 @@ function bericht(a, titel) {
   const z = [];
   z.push(`\n=== ${titel} ===`);
   z.push(`${a.partien} Partien · Siegquote ${prozent(a.siegquote)} · Ø Tag des Siegs ${zahl(a.tageBisSieg)} · Ø Tage ${zahl(a.tageImSchnitt)}`);
-  z.push(`Endgründe: ${Object.entries(a.proGrund).filter(([, v]) => v > 0).map(([k, v]) => `${k} ${prozent(v)}`).join(' · ')}`);
-  z.push(`Sieg pro Fluchtweg: ${Object.entries(a.proWeg).map(([k, v]) => `${k} ${prozent(v)}`).join(' · ')}`);
-  z.push(`Anteil gewählter Fluchtweg (an den Fluchten): ${Object.entries(a.wegAnteil).map(([k, v]) => `${k} ${prozent(v)}`).join(' · ')}`);
+  z.push(`Endgründe: ${Object.entries(a.proGrund).filter(([, v]) => v > 0).map(([k, v]) => `${ENDE_KURZ[k] ?? k} ${prozent(v)}`).join(' · ')}`);
+  z.push(`Sieg pro Fluchtweg: ${Object.entries(a.proWeg).map(([k, v]) => `${WEG_NAME[k] ?? k} ${prozent(v)}`).join(' · ')}`);
+  z.push(`Anteil gewählter Fluchtweg (an den Fluchten): ${Object.entries(a.wegAnteil).map(([k, v]) => `${WEG_NAME[k] ?? k} ${prozent(v)}`).join(' · ')}`);
   z.push(`Pro Modus: ${Object.entries(a.proModus).map(([k, v]) => `${k} ${prozent(v.siegquote)}`).join(' · ')} · pro Spielerzahl: ${Object.entries(a.proSpielerzahl).map(([k, v]) => `${k} ${prozent(v.siegquote)}`).join(' · ')}`);
-  z.push(`Pro Charakter: ${Object.entries(a.charakter).map(([k, v]) => `${k} ${prozent(v.siegquote)} (${v.partien})`).join(' · ')}`);
+  z.push(`Pro Charakter: ${Object.entries(a.charakter).map(([k, v]) => `${CHARAKTER_NAME[k] ?? k} ${prozent(v.siegquote)} (${v.partien})`).join(' · ')}`);
   z.push(`Pro Bot-Stufe: ${Object.entries(a.stufe).map(([k, v]) => `${k} ${prozent(v.siegquote)}`).join(' · ')}`);
   z.push(`Niederlage Lava ${prozent(a.niederlageLava)} · Tod ${prozent(a.niederlageTod)} · Kompass gefunden ${prozent(a.kompassGefunden)} (Ø Tag ${zahl(a.kompassTag)})`);
   z.push(`Material: leere Stapel Holz ${zahl(a.knappheit.holz, 2)}, Seil ${zahl(a.knappheit.seil, 2)} · am Ende fehlte Holz ${zahl(a.knappheit.fehltHolz)}, Seil ${zahl(a.knappheit.fehltSeil)}`);

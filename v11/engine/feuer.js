@@ -24,25 +24,33 @@ export function ketteFertig(nummern, feuer, abstand, ring) {
   return null;
 }
 
-// Grösste Teilkette, die noch fertig gebaut werden kann (für die Anzeige «x von y»).
-// Bedingung: benachbarte Feuer der Teilkette >= abstand, und die Lücke rundum lässt Platz
-// für die fehlenden Feuer (>= abstand * (fehlende + 1)).
+// Lässt sich die Teilkette noch zu einer vollen Kette ergänzen?
+// Alle Lücken (rundum) >= abstand, und in die Lücken passen zusammen die fehlenden Feuer:
+// in eine Lücke der Länge g passen floor(g / abstand) - 1 weitere Feuer.
+export function ergaenzbar(teil, feuer, abstand, ring) {
+  const t = [...teil].sort((a, b) => a - b);
+  if (t.length > feuer) return false;
+  if (t.length <= 1) return Math.floor(ring / abstand) >= feuer;
+  let platz = 0;
+  for (let i = 0; i < t.length; i++) {
+    const g = abstandRing(t[i], t[(i + 1) % t.length], ring);
+    if (g < abstand) return false;
+    platz += Math.floor(g / abstand) - 1;
+  }
+  return platz >= feuer - t.length;
+}
+
+// Grösste Teilkette, die noch fertig gebaut werden kann (für «x von y» und «zählt / zählt nicht»).
 export function besteTeilkette(nummern, feuer, abstand, ring) {
   const s = [...new Set(nummern)].sort((a, b) => a - b);
   if (s.length === 0) return [];
   const fertig = ketteFertig(s, feuer, abstand, ring);
   if (fertig) return fertig;
-  const passt = (t) => {
-    if (t.length > feuer) return false;
-    for (let i = 1; i < t.length; i++) if (t[i] - t[i - 1] < abstand) return false;
-    if (t.length <= 1) return true;
-    return abstandRing(t[t.length - 1], t[0], ring) >= abstand * (feuer - t.length + 1);
-  };
   let beste = [];
   if (s.length <= 16) {
     for (let m = 1; m < 1 << s.length; m++) {
       const t = s.filter((_, i) => m & (1 << i));
-      if (t.length < beste.length || !passt(t)) continue;
+      if (t.length < beste.length || t.length > feuer || !ergaenzbar(t, feuer, abstand, ring)) continue;
       if (t.length > beste.length || t.join(',') < beste.join(',')) beste = t;
     }
     return beste;
@@ -50,7 +58,7 @@ export function besteTeilkette(nummern, feuer, abstand, ring) {
   // Viele Feuer: gierig ab jedem Start.
   for (let i = 0; i < s.length; i++) {
     const t = [s[i]];
-    for (let j = i + 1; j < s.length && t.length < feuer; j++) if (s[j] - t[t.length - 1] >= abstand && passt([...t, s[j]])) t.push(s[j]);
+    for (let j = i + 1; j < s.length && t.length < feuer; j++) if (ergaenzbar([...t, s[j]], feuer, abstand, ring)) t.push(s[j]);
     if (t.length > beste.length) beste = t;
   }
   return beste;
@@ -62,8 +70,7 @@ export function luecken(kette, feuer, abstand, ring) {
   return kette.map((von, i) => {
     const bis = kette[(i + 1) % kette.length];
     const laenge = abstandRing(von, bis, ring);
-    const noetig = i === kette.length - 1 ? abstand * (feuer - kette.length + 1) : abstand;
-    return { von, bis, laenge, gueltig: laenge >= noetig };
+    return { von, bis, laenge, gueltig: laenge >= abstand };
   });
 }
 

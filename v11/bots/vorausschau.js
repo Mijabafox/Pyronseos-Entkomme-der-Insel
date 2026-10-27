@@ -5,9 +5,9 @@
 // im Browser begrenzt zusätzlich das Zeitbudget pro Zug.
 import { Zufall, neueQuellen } from '../engine/rng.js';
 import { klon, ROHSTOFFE } from '../engine/config.js';
-import { ausfuehren, erlaubteAktionen, istErlaubt, ketteInfo, leereStatistik } from '../engine/engine.js';
+import { ausfuehren, erlaubteAktionen, istErlaubt, ketteInfo, leereStatistik, klonen } from '../engine/engine.js';
 import { sicht, VERDECKT } from '../engine/sicht.js';
-import { gruppe } from '../engine/kern.js';
+import { gruppe, teamVon } from '../engine/kern.js';
 import { kasse, fehlend, gewichtet, wegKosten } from './wissen.js';
 
 const RICHTUNGEN = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
@@ -90,7 +90,7 @@ function kandidaten(bot, sv, aktionen, standard) {
   for (const a of aktionen.filter((x) => x.typ === 'craften').slice(0, 2)) dazu(a);
   const moves = aktionen.filter((a) => a.typ === 'bewegen');
   for (const a of moves.slice(0, 2)) dazu(a);
-  return erg.slice(0, 5);
+  return erg.slice(0, 4);
 }
 
 export function vorausschau(bot, sv, aktionen, standard) {
@@ -113,10 +113,13 @@ export function vorausschau(bot, sv, aktionen, standard) {
         inner.siegweg = bot.siegweg;
         inner.mem = bot.mem;
         let schritte = 0;
-        while (!s.ende && s.aktiv === sv.ich && schritte++ < 40) {
+        while (!s.ende && s.aktiv === sv.ich && schritte++ < 14) {
           const ak = erlaubteAktionen(s);
           if (!ak.length) break;
-          let b = inner.entscheidenOhneFehler(sicht(s, s.aktiv), ak);
+          // In der vorgestellten Welt ist alles «bekannt» (nur Stichprobe): direkt entscheiden, ohne Snapshot-Kopie.
+          weltAlsSicht(s);
+          inner.cache = new Map(); inner.cacheFuer = s;
+          let b = inner.entscheidenOhneFehler(s, ak);
           if (b.typ === 'handeln' || !ak.some((x) => JSON.stringify(x) === JSON.stringify(b))) b = ak.find((x) => x.typ === 'zugBeenden') ?? ak[0];
           ausfuehren(s, b);
         }
@@ -130,9 +133,10 @@ export function vorausschau(bot, sv, aktionen, standard) {
   return kand[best];
 }
 
-function klonWelt(w) {
-  const { cfg, ...rest } = w;
-  const k = klon(rest);
-  k.cfg = cfg;
-  return k;
+function weltAlsSicht(s) {
+  s.ich = s.aktiv;
+  s.anzahl = { tierBeutel: s.tierBeutel.length, spezialStapel: s.spezialStapel.length, routenStapel: s.routenStapel.length, tagesStapel: s.tagesStapel.length, routenAblage: s.routenAblage.length };
+  s.spieler.forEach((p, i) => { p.anzahlRohstoffe = Object.values(p.hand).reduce((a, n) => a + n, 0); p.anzahlKarten = p.karten.length; p.team = teamVon(s, i); });
 }
+
+function klonWelt(w) { return klonen(w); }

@@ -317,7 +317,7 @@ class Partie {
 
   spielerHtml(sv, p, i, b) {
     const s = this.sl.s;
-    const team = p.team ?? null;
+    const team = p.team ?? (s.teams ? s.teams.findIndex((t) => t.includes(p.id)) : null);
     const char = p.charakter ? s.cfg.charaktere[p.charakter] : null;
     const hand = p.hand ? `<div class="rohstoffe">${ROHSTOFFE.map((r) => `<span class="${p.hand[r] ? '' : 'null'}" title="${ROHSTOFF[r]}">${ROHSTOFF_SYMBOL[r]} ${p.hand[r]}</span>`).join('')}</div>` : `<div class="hinweis">🂠 ${p.anzahlRohstoffe ?? Object.values(s.spieler[i].hand).reduce((a, x) => a + x, 0)} Rohstoffe verdeckt</div>`;
     const karten = p.karten ? (p.karten.length ? `<div class="handkarten">${p.karten.map((k) => `<div class="handkarte">${spezialKarte(s.cfg, k)}</div>`).join('')}</div>` : '') : (p.anzahlKarten ? `<div class="handkarten">${Array.from({ length: p.anzahlKarten }, () => `<div class="handkarte">${rueckseite('spezial')}</div>`).join('')}</div>` : '');
@@ -349,7 +349,8 @@ class Partie {
     const gruppen = s.modus === 'koop' ? [s.spieler.map((_, k) => k)] : s.modus === 'team' ? [0, 1].map((t) => s.spieler.flatMap((p, k) => (s.teams[t].includes(p.id) ? [k] : []))) : s.spieler.flatMap((p, k) => (p.ausgeschieden ? [] : [[k]]));
     const teile = gruppen.map((g) => {
       const info = ketteInfo(s, g);
-      const name = s.modus === 'koop' ? 'Gruppe' : s.modus === 'team' ? `${TEAM_SYMBOL[s.spieler[g[0]].id === s.teams[0][0] || s.teams[0].includes(s.spieler[g[0]].id) ? 0 : 1]} Team` : `<span class="punkt" style="background:${spielerFarbe[g[0]]}"></span>${esc(s.spieler[g[0]].name)}`;
+      const t = s.modus === 'team' ? (s.teams[0].includes(s.spieler[g[0]].id) ? 0 : 1) : null;
+      const name = s.modus === 'koop' ? 'Gruppe' : s.modus === 'team' ? `${TEAM_SYMBOL[t]} ${TEAM_NAMEN[t]}` : `<span class="punkt" style="background:${spielerFarbe[g[0]]}"></span>${esc(s.spieler[g[0]].name)}`;
       return `<div class="zeile">${ringSvg(info)}<div><b>${name}</b> <span class="hinweis">${info.feuer} Feuer, Abstand ≥ ${info.abstand}</span><div class="${info.fertig ? 'ok' : ''}">${info.kette.length} von ${info.feuer} Feuern</div><div>${info.kette.map((n) => `<span class="feuer-nr gueltig">${n}</span>`).join('')}${info.ungueltig.map((n) => `<span class="feuer-nr verletzt" title="verletzt den Abstand, zählt nicht">${n}</span>`).join('')}</div></div></div>`;
     });
     void b;

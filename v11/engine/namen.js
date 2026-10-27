@@ -1,4 +1,4 @@
-// Anzeigenamen (Deutsch, ohne ß).
+// Anzeigenamen (Deutsch, ohne scharfes S, mit Umlauten).
 
 export const TIER = {
   hase: { name: 'Hase', symbol: '🐇' }, wildhuhn: { name: 'Wildhuhn', symbol: '🐓' },
@@ -34,3 +34,7 @@ export const ENDE = {
   abbruch: 'Partie abgebrochen (Zuglimit)',
 };
 export const FLUCHTWEG_VON_GRUND = { floss: 'floss', notfloss: 'floss', signalfeuer: 'feuer', wrack: 'wrack' };
+export const ENDE_KURZ = { floss: 'Solides Floss', notfloss: 'Not-Floss', signalfeuer: 'Küstenfeuer-Kette', wrack: 'Flugzeugwrack', ueberlebender: 'Letzter Überlebender', lava: 'Lava', alle_ko: 'Alle am Boden', abbruch: 'Abbruch' };
+export const WEG_NAME = { floss: 'Floss', feuer: 'Küstenfeuer-Kette', wrack: 'Flugzeugwrack' };
+export const CHARAKTER_NAME = { ueberlebenskuenstler: 'Überlebenskünstler', jaeger: 'Jäger', kundschafter: 'Kundschafter', laeufer: 'Läufer', sanitaeter: 'Sanitäter', sammlerin: 'Sammlerin' };
+export const MODUS_KURZ = { koop: 'Koop', team: 'Team', pvp: 'PvP' };

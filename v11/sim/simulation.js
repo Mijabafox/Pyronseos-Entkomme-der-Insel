@@ -129,7 +129,7 @@ export function auswerten(partien) {
 // Hinweise wie in v10: auffällige Werte
 export function hinweise(a) {
   const h = [];
-  for (const w of WEGE) if ((a.wegAnteil[w] ?? 0) < 0.05 && a.siegquote > 0) h.push(`Fluchtweg «${w}» wird praktisch nie gewählt (${(100 * a.wegAnteil[w]).toFixed(1)} % der Fluchten).`);
+  for (const w of WEGE) if ((a.wegAnteil[w] ?? 0) < 0.05 && a.siegquote > 0) h.push(`Fluchtweg «${({ floss: 'Floss', feuer: 'Küstenfeuer-Kette', wrack: 'Flugzeugwrack' })[w]}» wird praktisch nie gewählt (${(100 * a.wegAnteil[w]).toFixed(1)} % der Fluchten).`);
   if (a.siegquote < 0.1) h.push(`Siegquote nur ${(100 * a.siegquote).toFixed(1)} % – sehr schwer (oder die Bots spielen schwach).`);
   if (a.siegquote > 0.9) h.push(`Siegquote ${(100 * a.siegquote).toFixed(1)} % – sehr leicht.`);
   if (a.abbrueche) h.push(`${a.abbrueche} Partien wurden am Zuglimit abgebrochen.`);
