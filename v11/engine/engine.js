@@ -32,7 +32,7 @@ export function neuePartie(cfg, opt = {}) {
     routenStapel: [], routenAblage: [], tagesStapel: [], tagesKarte: null, tagesAblage: [],
     vorrat: cfg.vorrat.unbegrenzt ? null : { ...cfg.vorrat.karten },
     wuerfe: [], ende: null, sammelfeld: null, notFloss: {}, log: [], ereignisse: [],
-    statistik: { tageskarten: [], spezialGezogen: [], duelle: 0, raube: { rohstoff: 0, spezial: 0, route: 0 }, zurueckgesetzt: 0, wasserZugende: 0, kaempfe: 0, kaempfeVerloren: 0, kompassTag: null, feuerGebaut: 0, feuerUngueltig: 0, notFlossVersuche: 0, verlauf: [] },
+    statistik: leereStatistik(),
     zuege: 0,
   };
   s.felder = brettAufbauen(s);
@@ -86,6 +86,10 @@ export function neuePartie(cfg, opt = {}) {
   tagesKarteZiehen(s);
   if (!s.ende) zugBeginnen(s);
   return s;
+}
+
+export function leereStatistik() {
+  return { tageskarten: [], spezialGezogen: [], duelle: 0, raube: { rohstoff: 0, spezial: 0, route: 0 }, zurueckgesetzt: 0, wasserZugende: 0, kaempfe: 0, kaempfeVerloren: 0, kompassTag: null, feuerGebaut: 0, feuerUngueltig: 0, notFlossVersuche: 0, verlauf: [] };
 }
 
 function spezialStapelBauen(s) {
