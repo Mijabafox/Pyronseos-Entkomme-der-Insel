@@ -128,7 +128,7 @@ function tagesKarteZiehen(s) {
   endePruefen(s);
 }
 
-function neuerZug(s) {
+export function neuerZug(s) {
   const c = s.cfg;
   return {
     phase: 'weitsicht_wuerfeln', wurf: null, weitsichtOffen: 0, weitsichtRadius: c.zug.weitsicht.radius,

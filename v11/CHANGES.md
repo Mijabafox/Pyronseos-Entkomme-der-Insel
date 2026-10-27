@@ -25,3 +25,11 @@
 - **Shelter-Lager als vierter Weg:** entfällt (Antwort 27.10.).
 - **Freier Tisch und Regel-Fragen** aus v10 sind nicht in V11 (Antwort 27.10.), v10 bleibt erreichbar.
 - Die Würfelgrösse im Tier- und Duellkampf (W6) ist Teil der Grundmechanik und kein Regler.
+
+## Stufe 2: Effekt-Baukasten und Karten als Daten
+
+- Alle 19 Tageskarten, Ruhiger Tag, Lava und alle Spezialkarten stehen als Daten in `config.json` und bestehen aus Bausteinen (`engine/effekte.js`): Herzen, Energie, Rohstoff geben/nehmen, Abgabe mit Ersatz, Karte weitergeben, Felder aufdecken, Bewegung gratis, Tier ziehen und kämpfen, Zug beenden, Kampfbonus, Abbau-Faktor, Wurf wiederholen, Weitsicht ändern, Bewegungskosten ändern, Trinken sperren, Rasten-Wert, Floss sperren, Rettungswurf, Würfeltabelle, Wahl, Werkzeug verlieren, Ausweichen, Schutz, Kampfsieg, Rauch, Duell, Brennsprit.
+- Bedingungen pro Effekt: Biom, «nicht bei Feuer/Shelter» (Schutz durch Shelter oder Feuer), mit/ohne Waffe, hat Werkzeug, Modus. Zielgruppe «aktiv» oder «alle».
+- Tageskarten-Modifikatoren wirken den ganzen Tag (z. B. Nebel, Erdrutsch, Dürre, Brise, Wildnis, Sturm).
+- Neue Grundmechaniken (Phasen, Rauch-Reaktion, Messer im Duell) bleiben bewusst im Code.
+- Regeltests für jeden Punkt aus Abschnitt 1 (`test/stufe2.test.mjs`).

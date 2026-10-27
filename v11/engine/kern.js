@@ -61,7 +61,8 @@ export function kartenEreignis(s, art, karte, spieler, ergebnis) {
 }
 
 export function wurf(s, wuerfel, zweck, i = s.aktiv) {
-  const wert = ganz(s, 'wuerfel', 1, wuerfel);
+  // testWuerfe: nur für Regeltests (vorgegebene Würfe), sonst Zufall aus der Würfelquelle.
+  const wert = s.testWuerfe?.length ? s.testWuerfe.shift() : ganz(s, 'wuerfel', 1, wuerfel);
   s.wuerfe.push({ wuerfel: `W${wuerfel}`, wert, zweck, spieler: i });
   if (s.wuerfe.length > 12) s.wuerfe.shift();
   return wert;
