@@ -273,7 +273,8 @@ export class Bot {
       if (w && w.pfad.length <= 2) return { text: 'Gelegenheit: kleines Tier jagen', ziel: (x) => x.key === w.ziel, amZiel: 'betreten', tierErlaubt: () => true, fokus: sv.felder[w.ziel].coord };
     }
     // 6. Gelegenheit: Spezialfeld direkt daneben
-    if (p.energie >= 3 && p.herzen >= 4 && this.kompassSucher(sv) !== i) {
+    // (Schätzung aus Erlaubtem: Anteil Gefahren unter den restlichen Spezialkarten)
+    if (p.energie >= 3 && p.herzen >= 4 && this.kompassSucher(sv) !== i && this.mem.gefahrAnteil(sv) < 0.55 + this.risiko * 0.3) {
       const n = nachbarn(f.coord).map(schluessel).find((k) => sv.felder[k]?.aufgedeckt && sv.felder[k].inhalt === 'spezial' && !this.blind.has(k));
       if (n) return { text: 'Gelegenheit: Spezialfeld untersuchen', ziel: (x) => x.key === n, amZiel: 'betreten', fokus: sv.felder[n].coord };
     }

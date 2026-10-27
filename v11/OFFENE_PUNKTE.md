@@ -16,3 +16,23 @@ Diese Punkte sind nicht entschieden. Jeder ist als Schalter oder Regler umgesetz
 | 10 | Routenkarte beim Ausscheiden (PvP) | `duelle.routeBeiAusscheiden` | Kompass liegt wieder unter dem Vulkanfels | wie v10 |
 | 11 | Spezialkarten-Stapel kleiner als Spezialfelder | `spezialkarten.stapel` | 20 (bei 20 Spezialfeldern) | Wird der Stapel kleiner gestellt, warnt der Validator. |
 | 12 | Shelter-Lager als Siegweg | – | entfällt | Antwort 27.10.: keine Siegmöglichkeit über Shelter. |
+| 13 | Zählweise «Feuer zählt nicht» | – (Regeldeutung) | Ein Feuer zählt, solange die Kette damit noch vollständig gebaut werden kann | v10 markierte auch korrekt gesetzte Feuer als ungültig (siehe CHANGES.md). Die Siegbedingung (alle Feuer mit gültigem Rundum-Abstand) ist davon nicht betroffen. Im Team bestätigen. |
+
+## Messung (Stand 27.10.2026, je 150 Partien, Bots «normal», Standard V10)
+
+| Modus | Siegquote | Anteil der Fluchten (Floss / Feuer / Wrack) | Wasser-Zugenden pro Partie | Duelle pro Partie |
+|---|---|---|---|---|
+| Koop 2 | 12,0 % | 33 % / 67 % / 0 % | 7,2 | – |
+| Koop 3 | 10,7 % | 0 % / 100 % / 0 % | 12,0 | – |
+| Koop 4 | 10,0 % | 0 % / 100 % / 0 % | 15,9 | – |
+| Team 2 gegen 2 | 12,7 % | 32 % / 16 % / 53 % | 12,9 | 3,5 |
+| PvP 2 | 46,0 % | 88 % / 0 % / 12 % | 5,1 | 3,5 |
+| PvP 3 | 27,3 % | 74 % / 0 % / 26 % | 7,8 | 6,6 |
+| PvP 4 | 25,3 % | 77 % / 0 % / 23 % | 10,5 | 10,3 |
+
+Vergleich v10 (dort im Reiter «Simulation», KI «Stark», je 60 Partien): Koop 3 bis 10 %, die Küstenfeuer-Kette nie.
+
+- **Zu Nr. 4 (Feuerkette ohne Gewitter):** Im Koop ab 3 Personen wird die Feuerkette zum einzigen erfolgreichen Weg (100 % der Fluchten). Im PvP gewinnt sie nie (3 Feuer mit Abstand 13 sind allein zu weit verteilt), im Team selten. Der Floss scheitert im Koop meist am Kompass und am Material für viele Personen.
+- **Zu Nr. 5 (Wasser beendet den Zug):** A/B-Vergleich Koop 3, 150 Partien mit gleichen Seeds. Mit Zugende 10,7 % Siegquote, ohne 12,7 % (Unterschied 2 Prozentpunkte, statistisch nicht deutlich). Wasser beendet rund 12 Züge pro Partie.
+- **Allgemein:** Alle Modi liegen unter oder um 10 bis 15 % (Koop, Team), PvP höher, weil es dort immer einen Sieger geben kann. Die Werte messen die Regeln nur, soweit die Bots menschlich spielen. Echte Playtests bleiben der Massstab (Abgleich über «⬇ Protokoll» und `node sim/cli.mjs --import`).
+

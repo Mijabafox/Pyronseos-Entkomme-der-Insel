@@ -16,6 +16,8 @@ Spielbare Versionen des Brettspiel-Prototyps. Bitte den Link nicht öffentlich t
 
 - **[Version 10 – neue Regeln auf Basis V8](https://mijabafox.github.io/Pyronseos-Entkomme-der-Insel/v10/)** (Trinken beendet den Zug, Tierkampf-Niederlage = zurück + Zugende, Routenkarte statt Kompass, Läufer abgeschwächt, ohne Gewitter)
 
+- **[Version 11 – Regler-Labor und menschennahe KI](https://mijabafox.github.io/Pyronseos-Entkomme-der-Insel/v11/)** (Regelstand V10, alle Werte als Regler, Karteneditor, Bots in vier Stufen mit Persönlichkeit, Simulation mit Sweep, A/B, Replay und Abgleich mit echten Partien)
+
 Dateien: Version 1 = `index.html`, Version 2 = `v2/index.html`, Version 3 = `v3/index.html`, Version 4 = `v4/index.html`, Version 5 = `v5/index.html`
 
 Version 6 = `v6/index.html`
@@ -27,3 +29,5 @@ Version 8 = `v8/index.html` (mit Bildern im selben Ordner)
 Version 9 = `v9/index.html` (mit Bildern im selben Ordner)
 
 Version 10 = `v10/index.html` (mit Bildern im selben Ordner)
+
+Version 11 = `v11/index.html` (Quellcode, Simulation und Tests im selben Ordner, siehe `v11/README.md`)
