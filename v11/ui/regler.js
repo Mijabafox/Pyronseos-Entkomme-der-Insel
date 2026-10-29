@@ -92,7 +92,27 @@ export function reglerOeffnen(pfad = null, bereich = null) {
 }
 app.reglerOeffnen = reglerOeffnen;
 
-const istGeaendert = (pfad) => JSON.stringify(lesen(app.cfg, pfad) ?? null) !== JSON.stringify(lesen(app.standard, pfad) ?? null);
+// Lesbare Gruppentitel statt Pfaden (z. B. «zug.ertrag.baum.bonus» → «Ertrag › Baum › Bonus mit Werkzeug»).
+const WORT = {
+  match: 'Partie', tage: 'Tage', figur: 'Figur', startAusruestung: 'Startausrüstung', startRohstoffe: 'Start-Rohstoffe', startfeld: 'Startfeld',
+  charaktere: 'Charaktere', ueberlebenskuenstler: 'Überlebenskünstler', jaeger: 'Jäger', kundschafter: 'Kundschafter', laeufer: 'Läufer', sanitaeter: 'Sanitäter', sammlerin: 'Sammlerin', bandageKosten: 'Kosten der Bandage',
+  zug: 'Zug', weitsicht: 'Weitsicht', ertrag: 'Ertrag', baum: 'Baum', fels: 'Fels', blaetterbusch: 'Blätterbusch', strandgut: 'Strandgut', basis: 'Grundertrag', bonus: 'Bonus mit Werkzeug', wasser: 'Wasser', handel: 'Handel',
+  tiere: 'Tiere', klein: 'Kleine Tiere (Anzahl im Beutel)', gross: 'Grosse Tiere (Anzahl im Beutel)', schaden: 'Schaden bei Niederlage',
+  crafting: 'Crafting', rezepte: 'Rezept', seil: 'Seil', steinaxt: 'Steinaxt', spitzhacke: 'Spitzhacke', holzspeer: 'Holzspeer', steinmachete: 'Steinmachete', bandage: 'Bandage', lagerfeuer: 'Lagerfeuer', shelter: 'Shelter', kosten: 'Kosten',
+  brett: 'Brett', plaettchen: 'Plättchen', wald: 'Wald', wiese: 'Wiese', gebirge: 'Gebirge', strand: 'Strand', vulkan: 'Vulkan', zonen: 'Zonen',
+  fluchtwege: 'Fluchtwege', floss: 'Floss', solide: 'Solides Floss', not: 'Not-Floss', proPerson: 'Kosten pro Person', feuer: 'Küstenfeuer-Kette', tabelle: 'Tabelle', wrack: 'Flugzeugwrack',
+  vorrat: 'Materialvorrat', karten: 'Karten im Vorrat', duelle: 'Duelle', beute: 'Beute', sichtbarkeit: 'Sichtbarkeit', koop: 'Koop', team: 'Team', pvp: 'PvP',
+  routen: 'Routenkarten', spezialkarten: 'Spezialkarten', ki: 'KI', persoenlichkeit: 'Standard-Persönlichkeit', browser: 'KI-Tempo im Browser',
+};
+function gruppeName(g) {
+  const t = g.split('.');
+  const teile = (t.length > 1 ? t.slice(1) : t).map((w, i, a) => (/^\d+$/.test(w) ? `${w} ${w === '1' ? 'Person' : 'Personen'}` : WORT[w] ?? w)).filter((w, i, a) => !(w === 'Rezept' && a.length > 1));
+  return teile.join(' › ');
+}
+
+// Fehlende Kosten-Einträge zählen als 0 (so rechnet auch die Engine).
+const wert = (obj, pfad) => { const v = lesen(obj, pfad); return v === undefined ? 0 : v; };
+const istGeaendert = (pfad) => JSON.stringify(wert(app.cfg, pfad)) !== JSON.stringify(wert(app.standard, pfad));
 const wertText = (v) => (v === null || v === undefined ? '–' : typeof v === 'boolean' ? (v ? 'an' : 'aus') : String(v));
 
 export function reglerZeigen(el) {
@@ -177,7 +197,7 @@ function listeZeichnen(el) {
     const i = $('[data-pfad]', z);
     if (gesperrt) { i.disabled = true; $('.std', z).disabled = true; continue; }
     i.addEventListener('change', () => { setzen(app.cfg, r.pfad, eingabeWert(r, i)); geaendert(el, z, r); });
-    $('.std', z).addEventListener('click', () => { setzen(app.cfg, r.pfad, structuredClone(lesen(app.standard, r.pfad) ?? null)); geaendert(el, z, r, true); });
+    $('.std', z).addEventListener('click', () => { setzen(app.cfg, r.pfad, structuredClone(lesen(app.standard, r.pfad))); geaendert(el, z, r, true); });
   }
 }
 
@@ -185,13 +205,13 @@ function gruppiert(liste) {
   let letzte = '';
   return liste.map((r) => {
     let kopf = '';
-    if (r.gruppe !== letzte) { letzte = r.gruppe; kopf = `<div class="gruppe-titel">${esc(r.gruppe)}</div>`; }
+    if (r.gruppe !== letzte) { letzte = r.gruppe; kopf = `<div class="gruppe-titel" title="${esc(r.gruppe)}">${esc(gruppeName(r.gruppe))}</div>`; }
     return kopf + zeileHtml(r);
   }).join('');
 }
 
 function zeileHtml(r) {
-  const v = lesen(app.cfg, r.pfad), std = lesen(app.standard, r.pfad);
+  const v = wert(app.cfg, r.pfad), std = wert(app.standard, r.pfad);
   const g = istGeaendert(r.pfad);
   let feld;
   if (r.typ === 'bool') feld = `<input type="checkbox" data-pfad="${r.pfad}" ${v ? 'checked' : ''} aria-label="${esc(r.name)}"/>`;
@@ -209,7 +229,10 @@ function zeileHtml(r) {
 function eingabeWert(r, i) {
   if (r.typ === 'bool') return i.checked;
   if (r.typ === 'auswahl') return i.value === 'null' ? null : i.value;
-  return i.value === '' ? (lesen(app.standard, r.pfad) === null ? null : 0) : Number(i.value);
+  const std = lesen(app.standard, r.pfad);
+  if (i.value === '') return std === null ? null : std === undefined ? undefined : 0;
+  const n = Number(i.value);
+  return n === 0 && std === undefined ? undefined : n;
 }
 
 // Nach einer Änderung nur die betroffene Zeile, den Kopf und die Bereichsliste neu zeichnen.
@@ -222,7 +245,7 @@ function geaendert(el, z, r, zurueck = false) {
   z.replaceWith(ersatz);
   const i = $('[data-pfad]', ersatz);
   i.addEventListener('change', () => { setzen(app.cfg, r.pfad, eingabeWert(r, i)); geaendert(el, ersatz, r); });
-  $('.std', ersatz).addEventListener('click', () => { setzen(app.cfg, r.pfad, structuredClone(lesen(app.standard, r.pfad) ?? null)); geaendert(el, ersatz, r, true); });
+  $('.std', ersatz).addEventListener('click', () => { setzen(app.cfg, r.pfad, structuredClone(lesen(app.standard, r.pfad))); geaendert(el, ersatz, r, true); });
   if (zurueck) i.focus();
   kopfAktualisieren(el);
   app.toolbar();

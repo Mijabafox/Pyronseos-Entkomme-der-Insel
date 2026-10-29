@@ -17,8 +17,8 @@ export function toolbarZeichnen(teil = 'alle') {
   tag.hidden = !s;
   if (s) {
     const d = tagesKarteDef(s);
-    tag.innerHTML = `<span class="tag-anzeige">Tag <b>${s.tag}</b>/${s.tag + s.tagesStapel.length}</span>
-      <button type="button" class="wetter" id="tbWetter" title="${esc(d?.text ?? 'Tageskarte')} – Klick: gross zeigen">${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')}</button>
+    tag.innerHTML = `<span class="tag-anzeige" title="Seed ${s.seed}">Tag <b>${s.tag}</b>/${s.tag + s.tagesStapel.length}</span>
+      <button type="button" class="wetter" id="tbWetter" title="${esc(d?.text ?? 'Tageskarte')} – Klick: gross zeigen">${esc(d?.symbol ?? '')}<span class="wetter-text"> ${esc(d?.name ?? '')}</span></button>
       <span class="tb-seed" title="Seed: dieselbe Zahl ergibt dieselbe Insel und dieselbe Partie">🌱<span class="tb-text"> Seed</span> <b>${s.seed}</b></span>`;
     $('#tbWetter').addEventListener('click', () => p.tagKarteZeigen());
   }
