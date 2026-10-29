@@ -1,4 +1,6 @@
-// Spieltisch im Browser: alle drei Modi, Menschen und Bots gemischt, Tempo bis «Sehr langsam».
+// Spieltisch im Browser wie in V10: Tisch mit Zoom und Verschieben (die Seite scrollt nicht), Brett in der Mitte,
+// Stapel links, Spieler-Panels rechts, Seitenleiste mit Floss-Tableau und Gruppe, Protokoll-Box, Zoomleiste und Minimap.
+// Alle drei Modi, Menschen und Bots gemischt, Tempo bis «Sehr langsam».
 import { $, $$, esc, herunterladen, dialog, dialogZu } from './dom.js';
 import { app, teilKonfig } from './zustand.js';
 import { klon, ROHSTOFFE, rohstoffText } from '../engine/config.js';
@@ -11,9 +13,10 @@ import { gruppe, herzenMax, fliehende, istGross } from '../engine/kern.js';
 import { sicht } from '../engine/sicht.js';
 import { tagesKarteDef } from '../engine/effekte.js';
 import { STRANDRING } from '../engine/brett.js';
+import { pixel } from '../engine/hex.js';
 import { Spielleiter } from '../sim/spielleiter.js';
 import { zusammenfassungAus } from '../sim/simulation.js';
-import { brettSvg, HALB } from './brett.js';
+import { brettSvg, HALB, SE } from './brett.js';
 import { bild, spielerFarbe } from './bilder.js';
 import { spezialKarte, tagesKarte, rueckseite, routenKarte } from './karten.js';
 import { ROHSTOFF, ROHSTOFF_SYMBOL, REZEPT, TIER, ENDE, BIOM } from '../engine/namen.js';
@@ -22,6 +25,14 @@ import { STUFEN } from '../bots/bot.js';
 const TEMPO = { schnell: 60, normal: 350, langsam: 900 };
 const TEAM_SYMBOL = ['☀️', '🌙'];
 
+// Welt-Koordinaten in Pixeln, Brettmitte = (0, 0).
+const B = 420; // halbe Brettgrösse (Brett etwa 2,6 Panels breit wie in V10)
+const WELT = { x: -800, y: -470, w: 1960, h: 1260 }; // alles, was auf dem Tisch liegt
+const PANEL_ORT = [[460, -420], [800, -420], [460, 200], [800, 200]];
+const ZOOM = { min: 0.12, max: 2.5 };
+// Lage der Zahlenreihe auf der Spielerkarte (Originalbild 1752 × 1068), wie V10.
+const KARTE = { breite: 1752, hoehe: 1068, zahl0: 0.121, zahl6: 0.491, herzY: 0.66, energieY: 0.861, chip: 0.056 };
+
 export function neuesSpiel() {
   app.partie?.beenden();
   app.partie = new Partie(app.cfg, app.sitze);
@@ -29,11 +40,37 @@ export function neuesSpiel() {
 
 export function spielZeigen(el) {
   if (!app.partie) {
-    el.innerHTML = `<div class="ansicht"><div class="kasten"><h2>Keine Partie</h2><p>Stelle im Reiter «Setup» Modus, Spieler und Regler ein und starte dann die Partie.</p><button type="button" class="haupt" id="zumSetup">Zum Setup</button></div></div>`;
+    el.innerHTML = `<div class="leer-tisch"><div class="kasten"><h2>Keine Partie</h2><p>Stelle im Reiter «Setup» Modus, Spieler und Sitze ein und starte dann die Partie. Die Werte änderst du im Reiter «Regler».</p><button type="button" class="haupt" id="zumSetup">Zum Setup</button></div></div>`;
     $('#zumSetup', el).addEventListener('click', () => app.reiter('setup'));
+    $('#hinweisleiste').innerHTML = '<span class="was-jetzt">Noch keine Partie – im Setup starten.</span>';
     return;
   }
   app.partie.einhaengen(el);
+}
+
+// Charakter-Fähigkeit in einem Satz, aus der Konfiguration.
+function charakterText(cfg, id) {
+  const c = cfg.charaktere[id];
+  if (!c) return '';
+  switch (id) {
+    case 'ueberlebenskuenstler': return `${c.herzen} Herzen statt ${cfg.figur.herzen}`;
+    case 'jaeger': return `+${c.kampf} im Tierkampf`;
+    case 'kundschafter': return `+${c.kacheln} Kachel bei der Weitsicht`;
+    case 'laeufer': return `bei 0 Energie noch ${c.zusatzfelder} Zusatzfeld (1× pro Zug)`;
+    case 'sanitaeter': return `Bandage kostet nur ${rohstoffText(c.bandageKosten)}`;
+    case 'sammlerin': return `beim Abbau W${c.wuerfel}: ab ${c.schwelle} +${c.bonus} Rohstoff`;
+    default: return '';
+  }
+}
+
+const teamIndex = (s, i) => (s.teams ? (s.teams[0].includes(s.spieler[i].id) ? 0 : 1) : null);
+
+// Chip auf der Zahlenreihe der Spielerkarte (0 bis 6), Lage in Prozent wie V10.
+function chipOrt(wert, art) {
+  const x = (KARTE.zahl0 + ((KARTE.zahl6 - KARTE.zahl0) * Math.max(0, Math.min(6, wert))) / 6) * 100;
+  const y = (art === 'herz' ? KARTE.herzY : KARTE.energieY) * 100;
+  const w = KARTE.chip * 100, h = ((KARTE.chip * KARTE.breite) / KARTE.hoehe) * 100;
+  return `left:${(x - w / 2).toFixed(2)}%;top:${(y - h / 2).toFixed(2)}%;width:${w.toFixed(2)}%;height:${h.toFixed(2)}%`;
 }
 
 class Partie {
@@ -47,7 +84,10 @@ class Partie {
     this.gesehenEreignis = this.sl.s.ereignisse.at(-1)?.nr ?? 0;
     this.gesehenTag = null;
     this.logLaenge = 0;
-    this.kamera = { x: 0, y: 0, b: 2 * HALB };
+    this.kamera = null; // { x, y, z }: Bildschirm = Welt · z + (x, y)
+    this.panelZu = new Set();
+    this.leisteZu = false;
+    this.logZu = false;
     this.warteAufWeiter = false;
     this.buehne = [];
     this.timer = null;
@@ -55,21 +95,28 @@ class Partie {
     this.uebergabeFuer = null;
     this.endeGezeigt = false;
     this.meldung = null;
-    this.handelOffen = false;
   }
 
   beenden() { clearTimeout(this.timer); this.beendet = true; }
 
   einhaengen(el) {
     this.el = el;
-    el.innerHTML = `<div class="tisch">
-      <div class="leiste" id="leiste"></div>
-      <div class="brett-platz" id="brettPlatz"><div class="zoom"><button type="button" data-zoom="rein">＋</button><button type="button" data-zoom="raus">−</button><button type="button" data-zoom="mitte">⌖</button></div><div id="brettSvg"></div></div>
-      <aside class="seite" id="seite"></aside>
-      <section class="protokoll" id="protokoll" aria-label="Spielprotokoll"></section>
-    </div>`;
-    this.brettBedienung();
-    this.render();
+    el.innerHTML = `
+      <div id="tisch" class="tisch"><div class="welt"><div class="welt-inhalt"></div></div></div>
+      <div class="unten-links">
+        <div class="zoomleiste" aria-label="Zoom">
+          <button type="button" data-zoom="raus" title="Herauszoomen">−</button>
+          <button type="button" data-zoom="wert" title="Ansicht zentrieren">100 %</button>
+          <button type="button" data-zoom="rein" title="Hineinzoomen">+</button>
+          <button type="button" data-zoom="voll" title="Vollbild">⛶</button>
+        </div>
+        <div id="minimap" class="minimap" title="Übersicht – klicken, um dorthin zu springen"></div>
+      </div>
+      <aside id="seitenleiste" class="seitenleiste" aria-label="Floss-Tableau und Gruppe"></aside>
+      <section id="logBox" class="log-box" aria-label="Spielprotokoll"></section>`;
+    this.tischBedienung();
+    if (!this.kamera) requestAnimationFrame(() => { this.zentrieren(); });
+    if (this.gesehenTag === null) this.nachAenderung(); else this.render();
     this.weiter();
   }
 
@@ -91,7 +138,7 @@ class Partie {
     if (this.buehneOffen()) return;
     if (this.sl.istBotDran()) {
       const art = app.tempo.art;
-      if (art === 'weiter') { this.warteAufWeiter = true; this.renderLeiste(); return; }
+      if (art === 'weiter') { this.warteAufWeiter = true; this.renderKopf(); return; }
       const ms = art === 'auto' ? app.tempo.pause * 1000 : TEMPO[art] ?? 350;
       this.timer = setTimeout(() => this.botSchritt(), ms);
       return;
@@ -106,6 +153,8 @@ class Partie {
     this.letzterMensch = w;
     this.render();
   }
+
+  tempoGeaendert() { this.warteAufWeiter = false; this.renderKopf(); this.weiter(); }
 
   botSchritt() {
     if (app.partie !== this || this.sl.s.ende) return;
@@ -131,7 +180,7 @@ class Partie {
     this.weiter();
   }
 
-  // Neue Tageskarten und Spezialkarten in der Tischmitte zeigen.
+  // Neue Tageskarten und Spezialkarten gross in der Tischmitte zeigen.
   nachAenderung() {
     const s = this.sl.s;
     const b = this.betrachter();
@@ -140,17 +189,17 @@ class Partie {
     if (s.tagesKarte !== this.gesehenTag) {
       this.gesehenTag = s.tagesKarte;
       const d = tagesKarteDef(s);
-      neu.push({ titel: `☀️ Tag ${s.tag}`, html: tagesKarte(this.cfg, s.tagesKarte), text: d?.text ?? '' });
+      neu.push({ titel: `☀️ Tag ${s.tag}`, html: tagesKarte(this.cfg, s.tagesKarte, 'gross'), text: d?.text ?? '' });
     }
     for (const e of sv.ereignisse) {
       if (e.nr <= this.gesehenEreignis) continue;
       this.gesehenEreignis = e.nr;
       const name = esc(s.spieler[e.spieler].name);
-      if (e.art === 'gezogen') neu.push({ titel: `🂠 ${name} zieht eine Handkarte`, html: e.karte ? spezialKarte(this.cfg, e.karte) : rueckseite('spezial'), text: e.karte ? 'auf die Hand' : 'verdeckt', farbe: spielerFarbe[e.spieler] });
-      else if (e.art === 'route') neu.push({ titel: `🧭 ${name} zieht eine Routenkarte`, html: routenKarte(e.karte, !!e.karte), text: e.ergebnis, farbe: spielerFarbe[e.spieler] });
-      else neu.push({ titel: e.art === 'gespielt' ? `▶ ${name} spielt eine Karte aus` : `❗ ${name} zieht eine Sofort-Karte`, html: spezialKarte(this.cfg, e.karte), text: e.ergebnis, farbe: spielerFarbe[e.spieler] });
+      if (e.art === 'gezogen') neu.push({ titel: `🂠 ${name} zieht eine Handkarte`, html: e.karte ? spezialKarte(this.cfg, e.karte, 'gross') : rueckseite('spezial', 'gross'), text: e.karte ? 'auf die Hand' : 'verdeckt', farbe: spielerFarbe[e.spieler] });
+      else if (e.art === 'route') neu.push({ titel: `🧭 ${name} zieht eine Routenkarte`, html: routenKarte(e.karte, !!e.karte, 'gross'), text: e.ergebnis, farbe: spielerFarbe[e.spieler] });
+      else neu.push({ titel: e.art === 'gespielt' ? `▶ ${name} spielt eine Karte aus` : `❗ ${name} zieht eine Sofort-Karte`, html: spezialKarte(this.cfg, e.karte, 'gross'), text: e.ergebnis, farbe: spielerFarbe[e.spieler] });
     }
-    if (neu.length) this.buehneZeigen(neu);
+    if (neu.length && app.anzeige.buehne) this.buehneZeigen(neu);
     this.render();
   }
 
@@ -160,7 +209,7 @@ class Partie {
     this.buehne = [...(el.hidden ? [] : this.buehne), ...karten].slice(-6);
     const auto = this.sl.istBotDran() && app.tempo.art !== 'weiter';
     const ms = auto ? Math.max(600, (app.tempo.art === 'auto' ? app.tempo.pause * 1000 : TEMPO[app.tempo.art] ?? 350) + 700) : null;
-    el.innerHTML = `<div class="buehne-rahmen" role="dialog" aria-label="Karten in der Tischmitte"><div class="buehne-karten">${this.buehne.map((k) => `<figure class="buehne-platz" style="--farbe:${k.farbe ?? 'transparent'}"><figcaption>${k.titel}</figcaption>${k.html}<div class="buehne-text">${esc(k.text ?? '')}</div></figure>`).join('')}</div>
+    el.innerHTML = `<div class="buehne-rahmen" role="dialog" aria-label="Karten in der Tischmitte"><div class="buehne-karten">${this.buehne.map((k) => `<figure class="buehne-platz" style="--farbe:${k.farbe ?? 'var(--primaer)'}"><figcaption class="buehne-titel">${k.titel}</figcaption><div class="buehne-karte">${k.html}</div>${k.text ? `<div class="buehne-text">${esc(k.text)}</div>` : ''}</figure>`).join('')}</div>
       <div class="buehne-fuss"><button type="button" class="haupt" id="buehneOk">OK</button><span class="hinweis">${ms ? `schliesst von selbst nach ${Math.round(ms / 1000)} s` : 'Enter oder Klick schliesst'}</span></div></div>`;
     el.hidden = false;
     const zu = () => { clearTimeout(this.buehneTimer); el.hidden = true; this.buehne = []; document.removeEventListener('keydown', taste, true); this.weiter(); };
@@ -172,6 +221,11 @@ class Partie {
     if (ms) this.buehneTimer = setTimeout(zu, ms);
   }
 
+  tagKarteZeigen() {
+    const s = this.sl.s, d = tagesKarteDef(s);
+    this.buehneZeigen([{ titel: `☀️ Tag ${s.tag}`, html: tagesKarte(this.cfg, s.tagesKarte, 'gross'), text: d?.text ?? '' }]);
+  }
+
   uebergabeDialog(w) {
     const p = this.sl.s.spieler[w];
     const d = dialog(`<h2><span class="punkt" style="background:${spielerFarbe[w]}"></span>${esc(p.name)} ist dran</h2><p class="hinweis">Bitte das Gerät weitergeben. Deine Rohstoffe und Karten werden erst nach dem Bestätigen sichtbar.</p><div class="dialog-knoepfe"><button type="button" class="haupt" id="los">Los geht's</button></div>`);
@@ -181,33 +235,32 @@ class Partie {
   // ---------------- Darstellung ----------------
   render() {
     if (!this.el || app.aktuellerReiter() !== 'spiel') return;
-    this.renderLeiste(); this.renderBrett(); this.renderSeite(); this.renderProtokoll();
+    this.renderKopf(); this.renderTisch(); this.renderLeiste(); this.renderProtokoll(); this.minimapZeichnen();
   }
 
-  renderLeiste() {
-    const s = this.sl.s, d = tagesKarteDef(s);
-    const gesamt = s.tag + s.tagesStapel.length;
-    const tempo = [['schnell', 'schnell'], ['normal', 'normal'], ['langsam', 'langsam'], ['auto', 'sehr langsam – Auto (jeder Schritt)'], ['weiter', 'sehr langsam – Weiter-Knopf']];
-    const wer = entscheider(s);
-    const p = s.spieler[wer];
-    const hinweis = s.ende ? `<b>Partie zu Ende:</b> ${esc(ENDE[s.ende.grund] ?? s.ende.grund)}` : `<span class="punkt" style="background:${spielerFarbe[wer]}"></span><b>${esc(p.name)}</b> ${this.sitze[wer].ki ? `🤖 (${STUFEN[this.sitze[wer].stufe]?.name ?? ''})` : ''} · ${phaseText(s)}${this.sl.bots[wer]?.ziel ? ` · <span class="hinweis">plant: ${esc(this.sl.bots[wer].ziel.text)}</span>` : ''}${this.meldung ? ` <span class="fehler">💡 ${esc(this.meldung)}</span>` : ''}`;
-    $('#leiste', this.el).innerHTML = `<span class="tag">Tag ${s.tag} / ${gesamt}</span>
-      <button type="button" class="klein" id="tagKarte" title="${esc(d?.text ?? '')}">${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')}</button>
-      <span class="hinweis">${esc(MODUS_NAME[s.modus])} · Seed ${s.seed}</span>
-      <span class="hinweisleiste">${hinweis}</span>
-      <label class="hinweis">KI-Tempo <select id="tempo">${tempo.map(([k, n]) => `<option value="${k}" ${app.tempo.art === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
-      <label class="hinweis" ${app.tempo.art === 'auto' ? '' : 'hidden'}>Pause <select id="pause">${[1, 2, 3, 4, 5].map((n) => `<option ${app.tempo.pause === n ? 'selected' : ''}>${n}</option>`).join('')}</select> s</label>
-      ${this.warteAufWeiter ? '<button type="button" class="haupt" id="kiWeiter" title="Nächster KI-Schritt (Enter)">Weiter ▶</button>' : ''}
-      <button type="button" class="klein" id="export" title="Spielprotokoll für den Abgleich mit der Simulation">⬇ Protokoll</button>
-      <button type="button" class="klein" id="neu">Neue Partie …</button>`;
-    $('#tempo', this.el).addEventListener('change', (e) => { app.tempo.art = e.target.value; app.tempoSpeichern(); this.warteAufWeiter = false; this.renderLeiste(); this.weiter(); });
-    $('#pause', this.el)?.addEventListener('change', (e) => { app.tempo.pause = Number(e.target.value); app.tempoSpeichern(); });
-    $('#kiWeiter', this.el)?.addEventListener('click', () => this.botSchritt());
-    $('#tagKarte', this.el).addEventListener('click', () => this.buehneZeigen([{ titel: `☀️ Tag ${s.tag}`, html: tagesKarte(this.cfg, s.tagesKarte), text: d?.text ?? '' }]));
-    $('#export', this.el).addEventListener('click', () => this.exportieren());
-    $('#neu', this.el).addEventListener('click', () => app.reiter('setup'));
+  // Toolbar (Tag, Wetter, Seed, Weiter-Knopf) und Hinweisleiste.
+  renderKopf() {
+    if (!this.el || app.aktuellerReiter() !== 'spiel') return;
+    app.toolbar('spiel');
+    const s = this.sl.s;
+    const wer = entscheider(s), p = s.spieler[wer];
+    const leiste = $('#hinweisleiste');
+    if (s.ende) { leiste.innerHTML = `<span class="was-jetzt"><b>Partie zu Ende:</b> ${esc(ENDE[s.ende.grund] ?? s.ende.grund)} · Tag ${s.ende.tag}</span><button type="button" id="hlEnde">Ergebnis</button>`; $('#hlEnde').addEventListener('click', () => this.endeDialog()); return; }
+    const ki = this.sitze[wer].ki;
+    const plan = this.sl.bots[wer]?.ziel ? ` <span class="hinweis">· plant: ${esc(this.sl.bots[wer].ziel.text)}</span>` : '';
+    const knoepfe = [];
+    if (ki && this.warteAufWeiter) knoepfe.push('<button type="button" class="haupt" id="hlWeiter" title="Nächster KI-Schritt (Enter oder Leertaste)">Weiter ▶</button>');
+    if (!ki) {
+      const ak = erlaubteAktionen(s);
+      const haupt = s.zug.phase === 'weitsicht_wuerfeln' ? [{ typ: 'wuerfeln' }, '🎲 Würfeln'] : s.zug.phase === 'kampf' ? [{ typ: 'kaempfen' }, '⚔️ Kämpfen'] : ['bewegung', 'aktion'].includes(s.zug.phase) ? [{ typ: 'zugBeenden' }, 'Zug beenden'] : null;
+      if (haupt && ak.some((a) => JSON.stringify(a) === JSON.stringify(haupt[0]))) knoepfe.push(`<button type="button" class="haupt" data-aktion='${esc(JSON.stringify(haupt[0]))}'>${haupt[1]}</button>`);
+    }
+    leiste.innerHTML = `<span class="was-jetzt"><span class="punkt" style="background:${spielerFarbe[wer]}"></span><b>${esc(p.name)}</b>${ki ? ` 🤖 <span class="hinweis">(${esc(STUFEN[this.sitze[wer].stufe]?.name ?? '')})</span>` : ''}: ${esc(phaseText(s))}${ki ? plan : ` – ${esc(phaseHilfe(s))}`}</span>
+      ${this.meldung ? `<span class="tipp">💡 ${esc(this.meldung)}</span>` : ''}${knoepfe.join('')}`;
+    $('#hlWeiter')?.addEventListener('click', () => this.botSchritt());
+    for (const k of $$('[data-aktion]', leiste)) k.addEventListener('click', () => this.mensch(JSON.parse(k.dataset.aktion)));
     if (!this.tasteWeiter) {
-      this.tasteWeiter = (e) => { if (app.partie === this && this.warteAufWeiter && (e.key === 'Enter' || e.key === ' ') && !$('#dialog').open && !this.buehneOffen()) { e.preventDefault(); this.botSchritt(); } };
+      this.tasteWeiter = (e) => { if (app.partie === this && this.warteAufWeiter && (e.key === 'Enter' || e.key === ' ') && !$('#dialog').open && !this.buehneOffen() && !e.target.closest?.('input, select, textarea')) { e.preventDefault(); this.botSchritt(); } };
       document.addEventListener('keydown', this.tasteWeiter);
     }
   }
@@ -220,7 +273,8 @@ class Partie {
     return m;
   }
 
-  renderBrett() {
+  // Alles, was auf dem Tisch liegt: Brett, Stapel, Würfelschale, Vorrat, Spieler-Panels.
+  renderTisch() {
     const s = this.sl.s, b = this.betrachter(), sv = this.sichtFuer(b);
     const ziele = this.zielFelder();
     const g = b === null ? gruppe(s, s.aktiv) : gruppe(s, b);
@@ -230,57 +284,89 @@ class Partie {
     const svg = brettSvg(sv, {
       ziele: new Set(ziele.keys()),
       kette: { gueltig: new Set(info.kette.map((n) => nr.get(n))), ungueltig: new Set(info.ungueltig.map((n) => nr.get(n))) },
-      spur: this.spur, sammelfeld: s.sammelfeld,
+      spur: app.anzeige.spur ? this.spur : [], sammelfeld: s.sammelfeld,
       zielStrand: richtungSichtbar ? new Set(zielStrand(s, g)) : new Set(),
       hervor: this.sitze[entscheider(s)]?.ki ? s.spieler[s.aktiv].feld : null,
     });
-    const platz = $('#brettSvg', this.el);
-    platz.innerHTML = svg;
+    const inhalt = $('.welt-inhalt', this.el);
+    const scroll = new Map($$('.spieler-panel', inhalt).map((p) => [p.dataset.panel, $('.panel-inhalt', p)?.scrollTop ?? 0]));
+    inhalt.innerHTML = `
+      <div class="brett-platz" style="left:${-B}px;top:${-B}px;width:${2 * B}px;height:${2 * B}px">${svg}</div>
+      <div class="auslage-titel" style="left:-770px;top:-450px">Stapel · Würfel · Vorrat</div>
+      ${this.stapelHtml(sv)}
+      ${sv.spieler.map((p, i) => this.panelHtml(sv, p, i, b)).join('')}`;
+    for (const p of $$('.spieler-panel', inhalt)) { const i = $('.panel-inhalt', p); if (i) i.scrollTop = scroll.get(p.dataset.panel) ?? 0; }
+    for (const f of $$('.feld.ziel', inhalt)) f.addEventListener('click', () => { if (this.gezogen) return; const a = ziele.get(f.dataset.feld); if (a) this.mensch(a); });
+    for (const k of $$('[data-aktion]', inhalt)) k.addEventListener('click', () => this.mensch(JSON.parse(k.dataset.aktion)));
+    for (const k of $$('[data-panel-klapp]', inhalt)) k.addEventListener('click', () => { const i = Number(k.dataset.panelKlapp); if (this.panelZu.has(i)) this.panelZu.delete(i); else this.panelZu.add(i); this.renderTisch(); this.minimapZeichnen(); });
+    $('#handelKnopf', inhalt)?.addEventListener('click', () => this.handelDialog());
+    $('[data-tageskarte]', inhalt)?.addEventListener('click', () => this.tagKarteZeigen());
+    for (const k of $$('[data-gross]', inhalt)) k.addEventListener('click', () => dialog(`<h2>${esc(k.dataset.gross)}</h2><div class="gross-bild">${k.innerHTML}</div><div class="dialog-knoepfe"><button type="button" class="haupt" onclick="this.closest('dialog').close()">Schliessen</button></div>`));
     this.kameraSetzen();
-    for (const f of $$('.feld.ziel', platz)) f.addEventListener('click', () => { const a = ziele.get(f.dataset.feld); if (a) this.mensch(a); });
   }
 
-  kameraSetzen() {
-    const svg = $('#brettSvg svg', this.el);
-    if (!svg) return;
-    const k = this.kamera;
-    svg.setAttribute('viewBox', `${k.x - k.b / 2} ${k.y - k.b / 2} ${k.b} ${k.b}`);
+  stapelHtml(sv) {
+    const s = this.sl.s;
+    const stapel = (x, y, name, karte, zahl, extra = '') => `<div class="stapel" style="left:${x}px;top:${y}px"${extra}><div class="stapel-karten">${karte}</div><div class="stapel-name">${name}</div><div class="stapel-zahl">${zahl}</div></div>`;
+    const d = tagesKarteDef(s);
+    const tier = `<div class="tier-beutel">🐾<b>${s.tierBeutel.length}</b></div>`;
+    const wuerfe = s.wuerfe.slice(-6);
+    const letzter = wuerfe.at(-1);
+    const vorrat = sv.vorrat;
+    return [
+      stapel(-770, -420, 'Tagesstapel', rueckseite('tag', 'mini'), `${s.tagesStapel.length} Karten`),
+      stapel(-630, -420, 'Heute', `<div data-tageskarte title="${esc(d?.text ?? '')} – Klick: gross">${tagesKarte(this.cfg, s.tagesKarte, 'mini')}</div>`, `${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')}`),
+      stapel(-770, -200, 'Spezialkarten', rueckseite('spezial', 'mini'), `${s.spezialStapel.length} · Ablage ${s.spezialAblage.length}`),
+      stapel(-630, -200, 'Ablage', s.spezialAblage.length ? `<div data-gross="Spezial-Ablage">${spezialKarte(this.cfg, s.spezialAblage.at(-1), 'mini')}</div>` : '<div class="karte mini leer"></div>', s.spezialAblage.length ? 'oberste Karte' : 'leer'),
+      stapel(-770, 20, 'Routenkarten', rueckseite('route', 'mini'), `${s.routenStapel.length} Karten`),
+      stapel(-630, 20, 'Tierbeutel', tier, `Ablage ${s.tierAblage.length}`),
+      `<div class="wuerfelschale" style="left:-770px;top:250px"><div class="schale-titel">🎲 Würfelschale</div>
+        <div class="schale-boden">${wuerfe.length ? wuerfe.map((w) => `<div class="wuerfel w-${w.wuerfel}" style="--farbe:${spielerFarbe[w.spieler] ?? 'var(--primaer)'}" title="${esc(w.zweck ?? '')}"><span class="w-art">${w.wuerfel}</span><span class="w-wert">${w.wert}</span></div>`).join('') : '<span class="leer-hinweis">leer</span>'}</div>
+        <div class="schale-zweck">${letzter ? `${esc(s.spieler[letzter.spieler]?.name ?? '')}: ${esc(letzter.zweck ?? '')}` : 'Noch nicht gewürfelt'}</div></div>`,
+      `<div class="vorrat-auslage" style="left:-770px;top:420px"><div class="schale-titel">📦 Materialvorrat ${vorrat ? '' : '<span class="hinweis">unbegrenzt</span>'}</div>
+        <div class="rohstoff-karten">${ROHSTOFFE.map((r) => `<div class="rohstoff-karte${vorrat && !vorrat[r] ? ' null' : ''}" title="${ROHSTOFF[r]}: ${vorrat ? vorrat[r] : '∞'}"><img src="${bild.rohstoff(r)}" alt="${ROHSTOFF[r]}" draggable="false"/><b>${vorrat ? vorrat[r] : '∞'}</b></div>`).join('')}</div></div>`,
+    ].join('');
   }
 
-  brettBedienung() {
-    const platz = $('#brettPlatz', this.el);
-    platz.addEventListener('wheel', (e) => { e.preventDefault(); this.kamera.b = Math.max(120, Math.min(2 * HALB * 1.2, this.kamera.b * (e.deltaY > 0 ? 1.12 : 0.89))); this.kameraSetzen(); }, { passive: false });
-    let zug = null;
-    platz.addEventListener('pointerdown', (e) => { if (e.target.closest('.feld.ziel, button')) return; zug = { x: e.clientX, y: e.clientY, kx: this.kamera.x, ky: this.kamera.y }; platz.classList.add('zieht'); });
-    window.addEventListener('pointermove', (e) => {
-      if (!zug) return;
-      const svg = $('#brettSvg svg', this.el); if (!svg) return;
-      const f = this.kamera.b / svg.clientWidth;
-      this.kamera.x = zug.kx - (e.clientX - zug.x) * f; this.kamera.y = zug.ky - (e.clientY - zug.y) * f; this.kameraSetzen();
-    });
-    window.addEventListener('pointerup', () => { zug = null; platz.classList.remove('zieht'); });
-    for (const b of $$('[data-zoom]', platz)) b.addEventListener('click', () => {
-      if (b.dataset.zoom === 'rein') this.kamera.b *= 0.8; else if (b.dataset.zoom === 'raus') this.kamera.b = Math.min(2 * HALB * 1.2, this.kamera.b * 1.25); else this.kamera = { x: 0, y: 0, b: 2 * HALB };
-      this.kameraSetzen();
-    });
-  }
-
-  renderSeite() {
-    const s = this.sl.s, b = this.betrachter(), sv = this.sichtFuer(b);
-    const wer = entscheider(s);
-    const teile = [];
-    if (!s.ende && !this.sitze[wer].ki) teile.push(this.aktionenHtml());
-    else if (!s.ende) teile.push(`<div class="panel" style="--farbe:${spielerFarbe[wer]}"><header>🤖 ${esc(s.spieler[wer].name)} ist dran</header><div class="hinweis">${phaseText(s)}${this.sl.bots[wer]?.ziel ? `<br>plant: ${esc(this.sl.bots[wer].ziel.text)}` : ''}</div></div>`);
-    teile.push(this.flossHtml(sv, b));
-    teile.push(this.ketteHtml(s, b));
-    sv.spieler.forEach((p, i) => teile.push(this.spielerHtml(sv, p, i, b)));
-    const seite = $('#seite', this.el);
-    const scroll = seite.scrollTop;
-    seite.innerHTML = teile.join('');
-    seite.scrollTop = scroll;
-    for (const k of $$('[data-aktion]', seite)) k.addEventListener('click', () => this.mensch(JSON.parse(k.dataset.aktion)));
-    $('#handelKnopf', seite)?.addEventListener('click', () => this.handelDialog());
-    for (const k of $$('[data-charakter]', seite)) k.addEventListener('click', () => dialog(`<img class="charakter-bild" style="max-width:520px" src="${bild.charakter(k.dataset.charakter)}" alt=""/><div class="dialog-knoepfe"><button type="button" onclick="this.closest('dialog').close()">Schliessen</button></div>`));
+  panelHtml(sv, p, i, b) {
+    const s = this.sl.s;
+    const [x, y] = PANEL_ORT[i] ?? [460 + (i % 2) * 340, -420 + Math.floor(i / 2) * 620];
+    const aktiv = i === entscheider(s) && !s.ende;
+    const menschAmZug = aktiv && !this.sitze[i].ki;
+    const offen = menschAmZug || !this.panelZu.has(i);
+    const team = teamIndex(s, i);
+    const max = herzenMax(s, s.spieler[i]);
+    const status = p.ausgeschieden ? '<span class="status aus">✖ ausgeschieden</span>' : p.liegt ? '<span class="status liegt">🩹 am Boden</span>' : '';
+    const kopf = `<header class="panel-kopf"><span class="punkt" style="background:${spielerFarbe[i]}"></span><b class="panel-name">${esc(p.name)}</b> ${this.sitze[i].ki ? '<span title="KI">🤖</span>' : '<span title="Mensch">🧑</span>'}${team !== null ? ` <span class="hinweis" title="${TEAM_NAMEN[team]}">${TEAM_SYMBOL[team]}</span>` : ''}${aktiv ? ' <span class="am-zug">am Zug</span>' : ''}
+      <span class="panel-kurz">❤️${p.herzen} ⚡${p.energie}</span><button type="button" class="panel-klapp" data-panel-klapp="${i}" title="${offen ? 'Einklappen' : 'Aufklappen'}" ${menschAmZug ? 'disabled' : ''}>${offen ? '▾' : '▸'}</button></header>`;
+    if (!offen) return `<section class="spieler-panel zu${aktiv ? ' ist-aktiv' : ''}" data-panel="${i}" style="left:${x}px;top:${y}px;--farbe:${spielerFarbe[i]}">${kopf}</section>`;
+    const char = p.charakter ? s.cfg.charaktere[p.charakter] : null;
+    const karte = char
+      ? `<div class="spielerkarte" data-gross="${esc(char.name)}" title="${esc(`${char.name}: ${charakterText(s.cfg, p.charakter)} – Herzen ${p.herzen}, Energie ${p.energie}`)}"><img src="${bild.charakter(p.charakter)}" alt="Spielerkarte ${esc(char.name)}" draggable="false"/>
+          ${p.charakter === 'laeufer' ? `<div class="faehigkeit-neu" title="Fähigkeit nach Regelstand V10">Hat er 0 Energie, darf er noch ${char.zusatzfelder} Feld gehen – einmal pro Zug.</div>` : ''}
+          <img class="chip" src="${bild.herz}" alt="Herzen ${p.herzen}" style="${chipOrt(p.herzen, 'herz')}" draggable="false"/><img class="chip" src="${bild.energie}" alt="Energie ${p.energie}" style="${chipOrt(p.energie, 'energie')}" draggable="false"/></div>`
+      : `<div class="spielerkarte verdeckt"><img src="${bild.charakterRueckseite}" alt="Spielerkarte (verdeckt)" draggable="false"/><div class="sk-werte"><span title="Herzen"><img src="${bild.herz}" alt=""/> ${p.herzen}/${max}</span><span title="Energie"><img src="${bild.energie}" alt=""/> ${p.energie}/${s.cfg.figur.energie}</span></div></div>`;
+    const platz = (id, name, hat) => `<div class="ausruestung-karte${hat ? '' : ' leer'}" title="${esc(hat ? name : `${name}: noch nicht gebaut`)}">${hat && bild.werkzeug(id) ? `<img src="${bild.werkzeug(id)}" alt="${esc(name)}" draggable="false"/>` : `<span>${esc(name)}</span>`}</div>`;
+    const waffe = p.ausruestung.waffe;
+    const ausruestung = `<div class="ausruestung-karten">${platz('axt', 'Steinaxt', p.ausruestung.axt)}${platz('hacke', 'Spitzhacke', p.ausruestung.hacke)}${platz(waffe, waffe ? REZEPT[waffe]?.name ?? 'Waffe' : 'Waffe', !!waffe)}</div>`;
+    const rohstoffe = p.hand
+      ? `<div class="rohstoff-karten">${ROHSTOFFE.map((r) => `<div class="rohstoff-karte${p.hand[r] ? '' : ' null'}" title="${ROHSTOFF[r]}: ${p.hand[r]}"><img src="${bild.rohstoff(r)}" alt="${ROHSTOFF[r]}" draggable="false"/><b>${p.hand[r]}</b></div>`).join('')}</div>`
+      : `<div class="rohstoffe verdeckt">🂠 ${p.anzahlRohstoffe ?? 0} Rohstoffe verdeckt</div>`;
+    const karten = p.karten
+      ? (p.karten.length ? `<div class="hand-raster">${p.karten.map((k) => `<div data-gross="${esc(s.cfg.spezialkarten.karten[k]?.name ?? k)}">${spezialKarte(s.cfg, k, 'hand')}</div>`).join('')}</div>` : '<div class="hinweis">Keine Spezialkarten</div>')
+      : (p.anzahlKarten ? `<div class="hand-raster">${Array.from({ length: p.anzahlKarten }, () => rueckseite('spezial', 'hand')).join('')}</div>` : '<div class="hinweis">Keine Spezialkarten</div>');
+    const route = p.route ? `<div class="route-zeile"><div class="route-karte">${routenKarte(p.route, p.route !== 'verdeckt')}</div><span>🧭 Routenkarte ${p.route === 'verdeckt' ? '(Richtung geheim)' : `– Abschnitt <b>${esc(p.route)}</b>`}</span></div>` : '';
+    let aktionen = '';
+    if (menschAmZug) aktionen = `<div class="panel-aktionen">${this.aktionenHtml()}</div>`;
+    else if (aktiv) aktionen = `<div class="panel-aktionen"><b>🤖 ist dran</b> <span class="hinweis">${esc(phaseText(s))}${this.sl.bots[i]?.ziel ? ` · plant: ${esc(this.sl.bots[i].ziel.text)}` : ''}</span></div>`;
+    void b;
+    return `<section class="spieler-panel${aktiv ? ' ist-aktiv' : ''}" data-panel="${i}" style="left:${x}px;top:${y}px;--farbe:${spielerFarbe[i]}">${kopf}
+      <div class="panel-inhalt">
+        <div class="karten-reihe">${karte}${ausruestung}</div>
+        <div class="charakter-text hinweis">${char ? `${esc(char.symbol)} <b>${esc(char.name)}</b>: ${esc(charakterText(s.cfg, p.charakter))}` : 'Charakter verdeckt'} ${status}</div>
+        ${rohstoffe}
+        <div class="panel-zeile"><b>Spezialkarten</b></div>${karten}${route}
+      </div>${aktionen}</section>`;
   }
 
   aktionenHtml() {
@@ -290,45 +376,45 @@ class Partie {
     const knopf = (a, text, haupt = false, grund = null) => (hat(a) ? `<button type="button" class="${haupt ? 'haupt' : ''}" data-aktion='${esc(JSON.stringify(a))}'>${text}</button>` : grund ? `<button type="button" disabled title="${esc(grund)}">${text}</button>` : '');
     const z = s.zug, teile = [];
     switch (z.phase) {
-      case 'weitsicht_wuerfeln': teile.push(`<p><b>1 · Weitsicht</b> W${s.cfg.zug.weitsicht.wuerfel} würfeln, dann Kacheln im Umkreis ${z.weitsichtRadius} aufdecken.</p>`, knopf({ typ: 'wuerfeln' }, '🎲 Würfeln', true)); break;
-      case 'weitsicht_waehlen': teile.push(`<p><b>Aufdecken</b>: noch ${z.weitsichtOffen} markierte Kachel${z.weitsichtOffen === 1 ? '' : 'n'} anklicken${z.aufdeckenQuelle ? ` (${esc(z.aufdeckenQuelle)})` : ''}.</p>`); break;
+      case 'weitsicht_wuerfeln': teile.push(`<div><b>1 · Weitsicht</b> W${s.cfg.zug.weitsicht.wuerfel} würfeln, dann Kacheln im Umkreis ${z.weitsichtRadius} aufdecken.</div>`, `<div class="knopf-reihe">${knopf({ typ: 'wuerfeln' }, '🎲 Würfeln', true)}</div>`); break;
+      case 'weitsicht_waehlen': teile.push(`<div><b>Aufdecken</b>: noch ${z.weitsichtOffen} markierte Kachel${z.weitsichtOffen === 1 ? '' : 'n'} auf dem Brett anklicken${z.aufdeckenQuelle ? ` (${esc(z.aufdeckenQuelle)})` : ''}.</div>`); break;
       case 'kampf': {
         const k = z.kampf, chance = Math.round(100 * siegChance(tierZiel(s, k.tier), kampfBonus(s, p)));
-        teile.push(`<p><img src="${bild.tier(k.tier)}" width="48" style="vertical-align:middle" alt=""/> <b>Kampf gegen ${esc(TIER[k.tier]?.name)}</b>: W6 + ${kampfBonus(s, p)} ≥ ${tierZiel(s, k.tier)} (${chance} %). Niederlage: ${istGross(s, k.tier) || k.hinterhalt ? 'Schaden, ' : 'kein Schaden, '}${k.hinterhalt || k.steht ? 'du bleibst stehen' : 'zurück aufs Herkunftsfeld'}, der Zug endet.${k.blind ? ' <b>Keine Flucht</b> (blind betreten oder Hinterhalt).' : ' Oder markiertes Feld anklicken = Flucht.'}</p>`, knopf({ typ: 'kaempfen' }, '⚔️ Kämpfen', true));
+        teile.push(`<div class="kampf-zeile"><img src="${bild.tier(k.tier)}" width="44" alt=""/> <span><b>Kampf gegen ${esc(TIER[k.tier]?.name)}</b>: W6 + ${kampfBonus(s, p)} ≥ ${tierZiel(s, k.tier)} (${chance} %). Niederlage: ${istGross(s, k.tier) || k.hinterhalt ? 'Schaden, ' : 'kein Schaden, '}${k.hinterhalt || k.steht ? 'du bleibst stehen' : 'zurück aufs Herkunftsfeld'}, der Zug endet.${k.blind ? ' <b>Keine Flucht</b> (blind betreten oder Hinterhalt).' : ' Oder markiertes Feld anklicken = Flucht.'}</span></div>`, `<div class="knopf-reihe">${knopf({ typ: 'kaempfen' }, '⚔️ Kämpfen', true)}</div>`);
         break;
       }
-      case 'wahl': teile.push(`<p><b>${esc(z.wahl.quelle)}</b>: wähle</p>`, ...z.wahl.optionen.map((o) => knopf({ typ: 'wahl', index: o.index }, esc(o.name)))); break;
-      case 'beute': teile.push(`<p><b>Duell gewonnen!</b> Wähle die Beute von ${esc(s.spieler[z.beute.von].name)}:</p>`, ...beuteKategorien(s, z.beute.von).map((w) => knopf({ typ: 'beute', wahl: w }, { rohstoff: '🪵 Rohstoff (blind)', spezial: '🂠 Spezialkarte (blind)', route: '🧭 Routenkarte' }[w]))); break;
+      case 'wahl': teile.push(`<div><b>${esc(z.wahl.quelle)}</b>: wähle</div>`, `<div class="knopf-reihe">${z.wahl.optionen.map((o) => knopf({ typ: 'wahl', index: o.index }, esc(o.name))).join('')}</div>`); break;
+      case 'beute': teile.push(`<div><b>Duell gewonnen!</b> Wähle die Beute von ${esc(s.spieler[z.beute.von].name)}:</div>`, `<div class="knopf-reihe">${beuteKategorien(s, z.beute.von).map((w) => knopf({ typ: 'beute', wahl: w }, { rohstoff: '🪵 Rohstoff (blind)', spezial: '🂠 Spezialkarte (blind)', route: '🧭 Routenkarte' }[w])).join('')}</div>`); break;
       default: {
-        teile.push('<p class="hinweis">Feld anklicken = gehen. Abbau beendet die Bewegung. Trinken beendet den Zug.</p>');
-        teile.push('<div class="aktionen">', knopf({ typ: 'abbauen' }, '⛏ Abbauen'), knopf({ typ: 'trinken' }, '💧 Trinken (Zugende)', false, trinkenGrund(s) === 'kein Wasserfeld' ? null : trinkenGrund(s)), knopf({ typ: 'essen' }, '🍖 Essen'), knopf({ typ: 'kompassBergen' }, '🧭 Kompass bergen'), '</div>');
-        teile.push('<div class="aktionen">', ...Object.keys(s.cfg.crafting.rezepte).filter((r) => s.cfg.crafting.rezepte[r].aktiv).map((r) => knopf({ typ: 'craften', rezept: r }, `${REZEPT[r]?.symbol ?? ''} ${REZEPT[r]?.name ?? r} <span class="grund">${rohstoffText(rezeptKosten(s, p, r))}</span>`, false, craftGrund(s, r))), '</div>');
-        const flucht = [knopf({ typ: 'flossBauen', art: 'solide' }, '🛶 Solides Floss', true, flossGrund(s, 'solide')), knopf({ typ: 'flossBauen', art: 'not' }, '🛶 Not-Floss (W6)', false, flossGrund(s, 'not')), knopf({ typ: 'wrackReparieren' }, '✈️ Wrack reparieren', true, wrackGrund(s))];
-        teile.push('<div class="aktionen">', ...flucht, '</div>');
+        teile.push('<div class="hinweis">Feld auf dem Brett anklicken = gehen. Abbau beendet die Bewegung. Trinken beendet den Zug.</div>');
+        teile.push(`<div class="knopf-reihe">${knopf({ typ: 'abbauen' }, '⛏ Abbauen')}${knopf({ typ: 'trinken' }, '💧 Trinken (Zugende)', false, trinkenGrund(s) === 'kein Wasserfeld' ? null : trinkenGrund(s))}${knopf({ typ: 'essen' }, '🍖 Essen')}${knopf({ typ: 'kompassBergen' }, '🧭 Kompass bergen')}</div>`);
+        teile.push(`<details class="rezepte"><summary>🛠 Craften</summary><div class="rezept-raster">${Object.keys(s.cfg.crafting.rezepte).filter((r) => s.cfg.crafting.rezepte[r].aktiv).map((r) => knopf({ typ: 'craften', rezept: r }, `${REZEPT[r]?.symbol ?? ''} ${REZEPT[r]?.name ?? r} <small>${rohstoffText(rezeptKosten(s, p, r))}</small>`, false, craftGrund(s, r))).join('')}</div></details>`);
+        teile.push(`<div class="knopf-reihe">${knopf({ typ: 'flossBauen', art: 'solide' }, '🛶 Solides Floss', true, flossGrund(s, 'solide'))}${knopf({ typ: 'flossBauen', art: 'not' }, '🛶 Not-Floss (W6)', false, flossGrund(s, 'not'))}${knopf({ typ: 'wrackReparieren' }, '✈️ Wrack reparieren', true, wrackGrund(s))}</div>`);
         const extra = ak.filter((a) => ['reanimieren', 'sammelfeld', 'angreifen', 'duell'].includes(a.typ)).map((a) => knopf(a, a.typ === 'reanimieren' ? `🩹 ${esc(s.spieler[a.ziel].name)} reanimieren` : a.typ === 'sammelfeld' ? `📍 Sammelfeld Strand ${s.felder[a.feld].kuestenNr}` : a.typ === 'angreifen' ? `⚔️ ${esc(s.spieler[a.ziel].name)} angreifen` : `⚔️ Duell-Karte gegen ${esc(s.spieler[a.ziel].name)}`));
-        if (extra.length) teile.push('<div class="aktionen">', ...extra, '</div>');
-        teile.push('<div class="aktionen">', handelPartner(s).length ? '<button type="button" id="handelKnopf">🤝 Handeln / Schenken</button>' : '', knopf({ typ: 'zugBeenden' }, z.schritte === 0 ? `Zug beenden (rasten)` : 'Zug beenden', true), '</div>');
+        if (extra.length) teile.push(`<div class="knopf-reihe">${extra.join('')}</div>`);
+        teile.push(`<div class="knopf-reihe">${handelPartner(s).length ? '<button type="button" id="handelKnopf">🤝 Handeln / Schenken</button>' : ''}${knopf({ typ: 'zugBeenden' }, z.schritte === 0 ? 'Zug beenden (rasten)' : 'Zug beenden', true)}</div>`);
       }
     }
     const joker = ak.filter((a) => a.typ === 'joker');
-    if (joker.length) teile.push(`<div class="aktionen"><span class="hinweis">Handkarten:</span>${joker.map((a) => knopf(a, `${esc(s.cfg.spezialkarten.karten[a.karte]?.name)}: ${esc(s.cfg.spezialkarten.karten[a.karte]?.ausspielen.find((o) => o.wahl === a.wahl)?.name ?? a.wahl)}`)).join('')}</div>`);
-    return `<div class="panel aktiv" style="--farbe:${spielerFarbe[wer]}"><header>${esc(p.name)} ist dran</header>${teile.join('')}</div>`;
+    if (joker.length) teile.push(`<div class="knopf-reihe"><span class="hinweis">Handkarten:</span>${joker.map((a) => knopf(a, `${esc(s.cfg.spezialkarten.karten[a.karte]?.name)}: ${esc(s.cfg.spezialkarten.karten[a.karte]?.ausspielen.find((o) => o.wahl === a.wahl)?.name ?? a.wahl)}`)).join('')}</div>`);
+    return teile.join('');
   }
 
-  spielerHtml(sv, p, i, b) {
-    const s = this.sl.s;
-    const team = p.team ?? (s.teams ? s.teams.findIndex((t) => t.includes(p.id)) : null);
-    const char = p.charakter ? s.cfg.charaktere[p.charakter] : null;
-    const hand = p.hand ? `<div class="rohstoffe">${ROHSTOFFE.map((r) => `<span class="${p.hand[r] ? '' : 'null'}" title="${ROHSTOFF[r]}">${ROHSTOFF_SYMBOL[r]} ${p.hand[r]}</span>`).join('')}</div>` : `<div class="hinweis">🂠 ${p.anzahlRohstoffe ?? Object.values(s.spieler[i].hand).reduce((a, x) => a + x, 0)} Rohstoffe verdeckt</div>`;
-    const karten = p.karten ? (p.karten.length ? `<div class="handkarten">${p.karten.map((k) => `<div class="handkarte">${spezialKarte(s.cfg, k)}</div>`).join('')}</div>` : '') : (p.anzahlKarten ? `<div class="handkarten">${Array.from({ length: p.anzahlKarten }, () => `<div class="handkarte">${rueckseite('spezial')}</div>`).join('')}</div>` : '');
-    const route = p.route ? `<div class="zeile"><div class="handkarte">${routenKarte(p.route, p.route !== 'verdeckt')}</div><span>🧭 Routenkarte ${p.route === 'verdeckt' ? '(Richtung geheim)' : `– Abschnitt <b>${esc(p.route)}</b>`}</span></div>` : '';
-    const werkzeug = ['axt', 'hacke'].filter((w) => p.ausruestung[w]).map((w) => `<img src="${bild.werkzeug(w)}" alt="${w}" title="${w === 'axt' ? 'Steinaxt' : 'Spitzhacke'}"/>`).join('') + (p.ausruestung.waffe ? `<img src="${bild.werkzeug(p.ausruestung.waffe)}" alt="Waffe" title="${esc(REZEPT[p.ausruestung.waffe]?.name)}"/>` : '');
-    const status = p.ausgeschieden ? ' <span class="fehler">✖ ausgeschieden</span>' : p.liegt ? ' <span class="fehler">🩹 am Boden</span>' : '';
-    const max = herzenMax(s, s.spieler[i]);
-    return `<div class="panel${i === s.aktiv && !s.ende ? ' aktiv' : ''}" style="--farbe:${spielerFarbe[i]}">
-      <header><span class="punkt" style="background:${spielerFarbe[i]}"></span>${esc(p.name)} ${this.sitze[i].ki ? '🤖' : '🧑'}${team !== null ? ` ${TEAM_SYMBOL[team]} ${TEAM_NAMEN[team]}` : ''}${status}</header>
-      <div class="werte"><span><img src="${bild.herz}" alt=""/> ${p.herzen}/${max}</span><span><img src="${bild.energie}" alt=""/> ${p.energie}/${s.cfg.figur.energie}</span>${char ? `<span class="hinweis" data-charakter="${p.charakter}" style="cursor:pointer" title="Charakterkarte zeigen">${esc(char.symbol)} ${esc(char.name)}</span>` : '<span class="hinweis">Charakter verdeckt</span>'}</div>
-      ${hand}${werkzeug ? `<div class="ausruestung">${werkzeug}</div>` : ''}${route}${karten}</div>`;
+  // Seitenleiste rechts: Floss-Tableau, Küstenfeuer-Kette, Gruppe. Einklappbar.
+  renderLeiste() {
+    const s = this.sl.s, b = this.betrachter(), sv = this.sichtFuer(b);
+    const el = $('#seitenleiste', this.el);
+    this.el.classList.toggle('leiste-zu', this.leisteZu);
+    if (this.leisteZu) {
+      el.innerHTML = `<button type="button" class="leiste-klapp" data-leiste-klapp title="Aufklappen">◂</button><div class="leiste-kurz">🛶<br>🔥<br>👥</div>`;
+    } else {
+      const scroll = $('.leiste-inhalt', el)?.scrollTop ?? 0;
+      el.innerHTML = `<div class="leiste-kopf"><b>Floss und Spieler</b> <span class="hinweis">${esc(MODUS_NAME[s.modus])}</span><button type="button" class="leiste-klapp" data-leiste-klapp title="Einklappen (mehr Platz für das Brett)">▸</button></div>
+        <div class="leiste-inhalt">${this.flossHtml(sv, b)}${this.ketteHtml(s, b)}${this.gruppeHtml(sv)}</div>`;
+      $('.leiste-inhalt', el).scrollTop = scroll;
+      for (const z of $$('[data-zeige]', el)) z.addEventListener('click', () => this.panelZeigen(Number(z.dataset.zeige)));
+    }
+    $('[data-leiste-klapp]', el).addEventListener('click', () => { this.leisteZu = !this.leisteZu; this.renderLeiste(); this.minimapZeichnen(); });
   }
 
   flossHtml(sv, b) {
@@ -336,12 +422,17 @@ class Partie {
     const g = gruppe(s, b ?? s.aktiv);
     if (!s.cfg.fluchtwege.floss.aktiv && !s.cfg.fluchtwege.wrack.aktiv) return '';
     const kasse = sv.spieler.every((p, k) => !g.includes(k) || p.hand) ? kasseGesamt(s, g) : null;
-    const zeile = (name, kosten) => `<tr><td>${name}</td>${ROHSTOFFE.filter((r) => kosten[r]).map((r) => `<td class="${kasse && kasse[r] >= kosten[r] ? 'ok' : ''}">${ROHSTOFF_SYMBOL[r]} ${kasse ? `${Math.min(kasse[r], kosten[r])}/` : ''}${kosten[r]}</td>`).join('')}</tr>`;
+    const tabelle = (titel, kosten) => {
+      const zeilen = ROHSTOFFE.filter((r) => kosten[r]).map((r) => `<tr class="${kasse && kasse[r] >= kosten[r] ? 'ok' : ''}"><td>${ROHSTOFF_SYMBOL[r]} ${ROHSTOFF[r]}</td><td>${kosten[r]}</td><td>${kasse ? kasse[r] : '?'}</td><td><span class="haken">${kasse && kasse[r] >= kosten[r] ? '✓' : '○'}</span></td></tr>`).join('');
+      return `<div class="floss-teil"><b>${titel}</b><table class="floss-tabelle"><tr><th></th><th title="pro Person × fliehende Figuren">benötigt</th><th title="Vorrat der Gruppe">Gruppe</th><th></th></tr>${zeilen}</table></div>`;
+    };
     const besitzer = routenBesitzer(s, g);
     const route = besitzer === null ? 'Routenkarte fehlt (Kompass mit der Spitzhacke bergen)' : `Routenkarte bei ${esc(s.spieler[besitzer].name)}${sv.spieler[besitzer].route !== 'verdeckt' ? `: Abschnitt <b>${esc(sv.spieler[besitzer].route)}</b>` : ''}`;
-    return `<div class="panel"><header>🛶 Floss und ✈️ Wrack <span class="hinweis">für ${fliehende(s)} Person${fliehende(s) === 1 ? '' : 'en'}</span></header>
-      <table class="tabelle">${s.cfg.fluchtwege.floss.aktiv ? zeile('Solide', flossKosten(s, 'solide')) + (s.cfg.fluchtwege.floss.not.aktiv ? zeile('Not-Floss', flossKosten(s, 'not')) : '') : ''}${s.cfg.fluchtwege.wrack.aktiv ? zeile(`Wrack${s.cfg.fluchtwege.wrack.brennsprit ? ' + 🧪' : ''}`, wrackKosten(s)) : ''}</table>
-      <ul class="haken"><li>${besitzer === null ? '○' : '✓'} ${route}</li>${s.modus === 'koop' && s.sammelfeld ? `<li>📍 Sammelfeld Strand ${s.felder[s.sammelfeld].kuestenNr}</li>` : ''}${tagesKarteDef(s)?.effekte?.some((e) => e.typ === 'flossSperre') ? '<li class="fehler">Sturm: heute keine Floss-Flucht</li>' : ''}</ul></div>`;
+    const n = fliehende(s);
+    return `<section class="floss-tableau" aria-label="Floss-Tableau"><h3>🛶 Floss und ✈️ Wrack <span class="hinweis">für ${n} Figur${n === 1 ? '' : 'en'}</span></h3>
+      ${s.cfg.fluchtwege.floss.aktiv ? tabelle('Solides Floss', flossKosten(s, 'solide')) + (s.cfg.fluchtwege.floss.not.aktiv ? tabelle('Not-Floss <span class="hinweis">(W6, Gruppenwurf)</span>', flossKosten(s, 'not')) : '') : ''}
+      ${s.cfg.fluchtwege.wrack.aktiv ? tabelle(`Flugzeugwrack${s.cfg.fluchtwege.wrack.brennsprit ? ' <span class="hinweis">+ 🧪 Brennsprit</span>' : ''}`, wrackKosten(s)) : ''}
+      <ul class="haken-liste"><li>${besitzer === null ? '○' : '✓'} ${route}</li>${s.modus === 'koop' && s.sammelfeld ? `<li>📍 Sammelfeld Strand ${s.felder[s.sammelfeld].kuestenNr}</li>` : ''}${tagesKarteDef(s)?.effekte?.some((e) => e.typ === 'flossSperre') ? '<li class="fehler">Sturm: heute keine Floss-Flucht</li>' : ''}</ul></section>`;
   }
 
   ketteHtml(s, b) {
@@ -351,22 +442,155 @@ class Partie {
       const info = ketteInfo(s, g);
       const t = s.modus === 'team' ? (s.teams[0].includes(s.spieler[g[0]].id) ? 0 : 1) : null;
       const name = s.modus === 'koop' ? 'Gruppe' : s.modus === 'team' ? `${TEAM_SYMBOL[t]} ${TEAM_NAMEN[t]}` : `<span class="punkt" style="background:${spielerFarbe[g[0]]}"></span>${esc(s.spieler[g[0]].name)}`;
-      return `<div class="zeile">${ringSvg(info)}<div><b>${name}</b> <span class="hinweis">${info.feuer} Feuer, Abstand ≥ ${info.abstand}</span><div class="${info.fertig ? 'ok' : ''}">${info.kette.length} von ${info.feuer} Feuern</div><div>${info.kette.map((n) => `<span class="feuer-nr gueltig">${n}</span>`).join('')}${info.ungueltig.map((n) => `<span class="feuer-nr verletzt" title="verletzt den Abstand, zählt nicht">${n}</span>`).join('')}</div></div></div>`;
+      return `<div class="kette">${ringSvg(info)}<div><b>${name}</b><div class="kette-stand${info.fertig ? ' fertig' : ''}">${info.kette.length} von ${info.feuer} Feuern</div><div>${info.kette.map((n) => `<span class="feuer-nr gueltig">${n}</span>`).join('')}${info.ungueltig.map((n) => `<span class="feuer-nr verletzt" title="verletzt den Abstand, zählt nicht">${n}</span>`).join('')}</div></div></div>`;
     });
     void b;
-    return `<div class="panel"><header>🔥 Küstenfeuer-Kette</header><div class="hinweis">Strand 1–42 rundum (42 → 1 = 1) · ${s.modus === 'koop' ? 'alle Feuer gehören der Gruppe' : s.modus === 'team' ? 'nur Feuer des eigenen Teams' : 'nur eigene Feuer'} · Feuer bleiben stehen</div>${teile.join('')}</div>`;
+    const zeile = ketteInfo(s, gruppen[0] ?? []);
+    return `<section class="ketten-leiste"><h3>🔥 Küstenfeuer-Kette <span class="hinweis">${zeile.feuer} Feuer, Abstand ≥ ${zeile.abstand}</span></h3><div class="hinweis">Strandfelder 1–42 rundum (42 → 1 = 1 Feld) · ${s.modus === 'koop' ? 'alle Feuer gehören der Gruppe' : s.modus === 'team' ? 'nur Feuer des eigenen Teams' : 'nur eigene Feuer'} · gebaute Feuer bleiben stehen</div>${teile.join('')}</section>`;
+  }
+
+  gruppeHtml(sv) {
+    const s = this.sl.s;
+    const zeilen = sv.spieler.map((p, i) => {
+      const status = p.ausgeschieden ? ' <span class="status aus">✖</span>' : p.liegt ? ' <span class="status liegt">🩹</span>' : '';
+      const char = p.charakter ? s.cfg.charaktere[p.charakter] : null;
+      return `<li class="gruppe-zeile${i === entscheider(s) && !s.ende ? ' am-zug-zeile' : ''}" data-zeige="${i}" title="Panel auf dem Tisch zeigen" style="--farbe:${spielerFarbe[i]}"><span class="punkt" style="background:${spielerFarbe[i]}"></span><b>${esc(p.name)}</b> ${this.sitze[i].ki ? '🤖' : '🧑'}${teamIndex(s, i) !== null ? ` ${TEAM_SYMBOL[teamIndex(s, i)]}` : ''}${status}<span class="gruppe-werte">${char ? `${esc(char.symbol)} ` : ''}❤️${p.herzen} ⚡${p.energie}${p.hatRoute ?? p.route ? ' 🧭' : ''}</span></li>`;
+    }).join('');
+    return `<section class="gruppen-leiste"><h3>👥 ${s.modus === 'koop' ? 'Gruppe' : 'Spieler'} <span class="hinweis">${esc(MODUS_NAME[s.modus])}</span></h3><ul class="gruppe-liste">${zeilen}</ul></section>`;
   }
 
   renderProtokoll() {
     const s = this.sl.s;
-    const el = $('#protokoll', this.el);
-    const unten = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+    const el = $('#logBox', this.el);
+    const alt = $('.log-liste', el);
+    const unten = !alt || alt.scrollHeight - alt.scrollTop - alt.clientHeight < 30;
     const ab = Math.max(0, s.log.length - 400);
-    el.innerHTML = `<b>📜 Spielprotokoll</b> <span class="hinweis">${s.log.length} Einträge</span><ol start="${ab + 1}">${s.log.slice(ab).map((l, k) => `<li class="${ab + k >= this.logLaenge ? 'neu' : ''}">${esc(l)}</li>`).join('')}</ol>`;
+    el.innerHTML = `<header class="log-kopf"><b>📜 Spielprotokoll</b> <span class="hinweis">${s.log.length} Einträge</span><button type="button" data-log-klapp title="${this.logZu ? 'Aufklappen' : 'Einklappen'}">${this.logZu ? '▴' : '▾'}</button></header>
+      ${this.logZu ? '' : `<ol class="log-liste" start="${ab + 1}">${s.log.slice(ab).map((l, k) => `<li class="${ab + k >= this.logLaenge ? 'ki-jetzt' : ''}">${esc(l)}</li>`).join('')}</ol>`}`;
     this.logLaenge = s.log.length;
-    if (unten) el.scrollTop = el.scrollHeight;
+    const liste = $('.log-liste', el);
+    if (liste) liste.scrollTop = unten ? liste.scrollHeight : alt.scrollTop;
+    $('[data-log-klapp]', el).addEventListener('click', () => { this.logZu = !this.logZu; this.renderProtokoll(); });
   }
 
+  // ---------------- Tisch: Zoom, Verschieben, Minimap ----------------
+  tischBedienung() {
+    const tisch = $('#tisch', this.el);
+    tisch.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const r = tisch.getBoundingClientRect();
+      this.zoomen(e.deltaY > 0 ? 1 / 1.12 : 1.12, e.clientX - r.left, e.clientY - r.top);
+    }, { passive: false });
+    let zug = null;
+    tisch.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      if (e.target.closest('button, input, select, textarea, a, summary, .panel-inhalt, [data-tageskarte], [data-gross]')) return;
+      zug = { x: e.clientX, y: e.clientY, kx: this.kamera.x, ky: this.kamera.y, id: e.pointerId, bewegt: false };
+      this.gezogen = false;
+    });
+    tisch.addEventListener('pointermove', (e) => {
+      if (!zug || e.pointerId !== zug.id) return;
+      const dx = e.clientX - zug.x, dy = e.clientY - zug.y;
+      if (!zug.bewegt && Math.hypot(dx, dy) < 5) return;
+      if (!zug.bewegt) { zug.bewegt = true; tisch.setPointerCapture(e.pointerId); tisch.classList.add('zieht'); }
+      this.kamera.x = zug.kx + dx; this.kamera.y = zug.ky + dy; this.kameraSetzen();
+    });
+    const ende = (e) => {
+      if (!zug || e.pointerId !== zug.id) return;
+      this.gezogen = zug.bewegt;
+      zug = null; tisch.classList.remove('zieht');
+      setTimeout(() => { this.gezogen = false; }, 0);
+    };
+    tisch.addEventListener('pointerup', ende);
+    tisch.addEventListener('pointercancel', ende);
+    for (const b of $$('[data-zoom]', this.el)) b.addEventListener('click', () => {
+      const z = b.dataset.zoom, r = tisch.getBoundingClientRect();
+      if (z === 'rein') this.zoomen(1.25, r.width / 2, r.height / 2);
+      else if (z === 'raus') this.zoomen(0.8, r.width / 2, r.height / 2);
+      else if (z === 'wert') this.zentrieren();
+      else if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {});
+    });
+    const mini = $('#minimap', this.el);
+    mini.addEventListener('click', (e) => {
+      const r = mini.getBoundingClientRect();
+      const wx = WELT.x + ((e.clientX - r.left) / r.width) * WELT.w, wy = WELT.y + ((e.clientY - r.top) / r.height) * WELT.h;
+      const t = tisch.getBoundingClientRect();
+      this.kamera.x = t.width / 2 - wx * this.kamera.z; this.kamera.y = t.height / 2 - wy * this.kamera.z;
+      this.kameraSetzen();
+    });
+    if (!this.groesseBeobachter) {
+      this.groesseBeobachter = new ResizeObserver(() => this.minimapSicht());
+    }
+    this.groesseBeobachter.disconnect();
+    this.groesseBeobachter.observe(tisch);
+  }
+
+  // Sichtbare Fläche des Tisches (ohne Seitenleiste).
+  flaeche() {
+    const t = $('#tisch', this.el);
+    const leiste = this.leisteZu ? 44 : $('#seitenleiste', this.el)?.offsetWidth ?? 0;
+    return { w: Math.max(200, (t?.clientWidth ?? 800) - leiste), h: Math.max(200, t?.clientHeight ?? 600) };
+  }
+
+  zentrieren() {
+    const f = this.flaeche();
+    const z = Math.max(ZOOM.min, Math.min(ZOOM.max, Math.min((f.w - 30) / WELT.w, (f.h - 30) / WELT.h)));
+    this.kamera = { z, x: f.w / 2 - (WELT.x + WELT.w / 2) * z, y: f.h / 2 - (WELT.y + WELT.h / 2) * z };
+    this.kameraSetzen();
+  }
+
+  zoomen(faktor, mx, my) {
+    const k = this.kamera;
+    const z = Math.max(ZOOM.min, Math.min(ZOOM.max, k.z * faktor));
+    k.x = mx - (mx - k.x) * (z / k.z); k.y = my - (my - k.y) * (z / k.z); k.z = z;
+    this.kameraSetzen();
+  }
+
+  panelZeigen(i) {
+    const [x, y] = PANEL_ORT[i] ?? [460, -420];
+    const f = this.flaeche();
+    if (this.kamera.z < 0.6) this.kamera.z = 0.6;
+    this.kamera.x = f.w / 2 - (x + 160) * this.kamera.z; this.kamera.y = 90 - y * this.kamera.z;
+    this.panelZu.delete(i);
+    this.renderTisch(); this.minimapZeichnen();
+  }
+
+  kameraSetzen() {
+    if (!this.kamera || !this.el) return;
+    const welt = $('.welt', this.el);
+    if (!welt) return;
+    const k = this.kamera;
+    welt.style.transform = `translate(${k.x.toFixed(1)}px, ${k.y.toFixed(1)}px) scale(${k.z.toFixed(4)})`;
+    const w = $('[data-zoom="wert"]', this.el);
+    if (w) w.textContent = `${Math.round(k.z * 100)} %`;
+    this.minimapSicht();
+  }
+
+  minimapZeichnen() {
+    const el = $('#minimap', this.el);
+    if (!el) return;
+    const s = this.sl.s;
+    const m = B / HALB;
+    const rand = SE * m;
+    const figuren = s.spieler.map((p, i) => { const f = s.felder[p.feld]; if (!f || p.ausgeschieden) return ''; const c = pixel(f.coord, SE); return `<circle cx="${(c.x * m).toFixed(0)}" cy="${(c.y * m).toFixed(0)}" r="${rand.toFixed(0)}" fill="${spielerFarbe[i]}" stroke="#fff" stroke-width="10"/>`; }).join('');
+    const panels = s.spieler.map((_, i) => { const [x, y] = PANEL_ORT[i] ?? [460, -420]; return `<rect x="${x}" y="${y}" width="320" height="${this.panelZu.has(i) ? 40 : 500}" rx="12" fill="${spielerFarbe[i]}" opacity="0.35"/>`; }).join('');
+    el.innerHTML = `<svg viewBox="${WELT.x} ${WELT.y} ${WELT.w} ${WELT.h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <rect x="${WELT.x}" y="${WELT.y}" width="${WELT.w}" height="${WELT.h}" fill="#f3efe6"/>
+      <rect x="-770" y="-420" width="250" height="620" rx="10" fill="#e2dbcc"/><rect x="-770" y="250" width="270" height="370" rx="10" fill="#e2dbcc"/>
+      <image href="${bild.brett}" x="${-B}" y="${-B}" width="${2 * B}" height="${2 * B}" preserveAspectRatio="none"/>
+      ${panels}${figuren}<rect class="sicht" x="0" y="0" width="0" height="0"/></svg>`;
+    this.minimapSicht();
+  }
+
+  minimapSicht() {
+    const r = $('#minimap .sicht', this.el);
+    if (!r || !this.kamera) return;
+    const k = this.kamera, f = this.flaeche();
+    r.setAttribute('x', (-k.x / k.z).toFixed(0)); r.setAttribute('y', (-k.y / k.z).toFixed(0));
+    r.setAttribute('width', (f.w / k.z).toFixed(0)); r.setAttribute('height', (f.h / k.z).toFixed(0));
+  }
+
+  // ---------------- Dialoge ----------------
   handelDialog() {
     const s = this.sl.s, ich = s.aktiv, p = s.spieler[ich];
     const partner = handelPartner(s);
@@ -423,6 +647,20 @@ export function phaseText(s) {
   return { weitsicht_wuerfeln: 'Weitsicht würfeln', weitsicht_waehlen: 'Kacheln aufdecken', bewegung: 'Bewegung und Aktionen', aktion: 'Aktionen (nach dem Abbau)', kampf: `Kampf gegen ${TIER[z.kampf?.tier]?.name ?? 'ein Tier'}`, wahl: 'Wahl treffen', beute: 'Duell-Beute wählen' }[z.phase] ?? z.phase;
 }
 
+// Was ist jetzt zu tun? (Hinweisleiste für Menschen)
+function phaseHilfe(s) {
+  const z = s.zug;
+  return {
+    weitsicht_wuerfeln: `würfle den W${s.cfg.zug.weitsicht.wuerfel} für die Weitsicht.`,
+    weitsicht_waehlen: `klicke ${z.weitsichtOffen} markierte Kachel${z.weitsichtOffen === 1 ? '' : 'n'} auf dem Brett an.`,
+    bewegung: 'Feld anklicken = gehen, Aktionen im eigenen Panel.',
+    aktion: 'nach dem Abbau: Aktionen im eigenen Panel oder Zug beenden.',
+    kampf: 'kämpfe oder fliehe auf ein markiertes Feld.',
+    wahl: 'triff die Wahl im eigenen Panel.',
+    beute: 'wähle die Beute im eigenen Panel.',
+  }[z.phase] ?? '';
+}
+
 export function ringSvg(info) {
   const pos = (n, r = 36) => { const w = ((n - 1) / STRANDRING) * 2 * Math.PI; return { x: 48 + Math.sin(w) * r, y: 48 - Math.cos(w) * r }; };
   const boegen = info.luecken.map((l) => {
@@ -431,7 +669,7 @@ export function ringSvg(info) {
   }).join('');
   const punkte = [...info.kette.map((n) => [n, 'gueltig']), ...info.ungueltig.map((n) => [n, 'verletzt'])].map(([n, k]) => { const p = pos(n); return `<circle class="${k}" cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4"><title>Feuer auf Strandfeld ${n}</title></circle>`; }).join('');
   const zahlen = [1, 11, 22, 32].map((n) => { const p = pos(n, 45); return `<text x="${p.x.toFixed(1)}" y="${(p.y + 2.5).toFixed(1)}">${n}</text>`; }).join('');
-  return `<svg class="ring-leiste" viewBox="0 0 96 96" aria-hidden="true"><circle class="ring" cx="48" cy="48" r="36"/>${boegen}${punkte}${zahlen}</svg>`;
+  return `<svg class="ring-leiste" viewBox="0 0 96 96" width="96" height="96" aria-hidden="true"><circle class="ring" cx="48" cy="48" r="36"/>${boegen}${punkte}${zahlen}</svg>`;
 }
 
 export { kasseAufFeld, BIOM };

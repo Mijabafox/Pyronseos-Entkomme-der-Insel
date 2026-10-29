@@ -81,3 +81,83 @@ Siehe Abschnitt «Messung» in OFFENE_PUNKTE.md.
 | Kein scharfes S im ganzen Spieltext | ✅ | Suche über alle Text- und Codedateien in `v11/`: keines gefunden |
 
 Tests: `node --test test/*.test.mjs`. Stand der letzten Ausführung: 55 Tests bestanden, 0 fehlgeschlagen.
+
+## Nachbesserung: Design wie V10 und eigener Reiter «Regler»
+
+Nur die Oberfläche wurde geändert (`index.html`, `style.css`, `ui/`). Engine, Bots, Simulation, `config.json` und Tests sind unverändert. Es war keine Engine-Änderung nötig.
+
+**Stufe 1 – Reiter «Regler» und kurzes Setup**
+
+- Reiter in der Reihenfolge Spiel, Setup, Regler, Karten, Simulation, Replay, Regeln. Beim Laden ist «Setup» aktiv, «Partie starten» springt zu «Spiel».
+- Neuer Reiter «Regler» (`ui/regler.js`):
+  - Links eine feste Bereichsliste mit der Zahl der Regler und der geänderten Regler je Bereich, rechts die Regler des gewählten Bereichs.
+  - Oben fix: Suche (Name oder Pfad, über alle Bereiche), Presets (laden, speichern als, löschen), Export und Import als Datei, «↺ Standard V10» und die Zahl der Werte, die vom Standard abweichen.
+  - Darunter steht fix das Prüfergebnis. Fehler und Warnungen sind Links zum betroffenen Regler: Der Bereich öffnet sich, der Regler blinkt und bekommt den Fokus.
+  - Geänderte Regler sind farbig markiert («● geändert»). Jeder hat einen eigenen Knopf «↺ Standard», dazu Standardwert, Minimum und Maximum als Hinweis.
+  - Während einer Partie ist alles gesperrt. Es gibt «Partie beenden und entsperren» und «Zum Spiel».
+- Setup (`ui/setup.js`) enthält nur noch Preset (nur Auswahl), Modus, Spielerzahl, Seed, Sitze, Prüfergebnis und «Partie starten». Neben dem Start-Knopf stehen die Zahl der geänderten Werte und der Link «Regler anpassen».
+
+**Stufe 2 – Look und Bedienung wie V10**
+
+- Toolbar wie V10 (`ui/toolbar.js`): Logo, Modus-Pille, Reiterknöpfe (der aktive in der Primärfarbe), Tag mit Wetter-Pille (Klick zeigt die Tageskarte gross) und Seed, KI-Tempo (mit Pause bei «sehr langsam – Auto»), «Weiter ▶», «⬇ Protokoll», rechts die Schalter, «⌖» und «＋ Neue Partie».
+- Die Hinweisleiste unter der Toolbar zeigt, wer dran ist und was zu tun ist, mit dem passenden Hauptknopf (Würfeln, Kämpfen, Zug beenden oder Weiter).
+- Der Spieltisch füllt die volle Höhe. Die Seite scrollt nicht, nur der Tisch zoomt und lässt sich verschieben:
+  - Mausrad zoomt um den Mauszeiger.
+  - Ziehen verschiebt den Tisch.
+  - Unten links liegt die Zoomleiste (−, %, +, Vollbild); ein Klick auf % zentriert die Ansicht.
+  - Die Minimap zeigt den sichtbaren Ausschnitt; ein Klick springt dorthin.
+- Auf dem Tisch liegen:
+  - das Brett in der Mitte;
+  - links die Stapel (Tagesstapel, Tageskarte, Spezialkarten und Ablage, Routenkarten, Tierbeutel), die Würfelschale und der Materialvorrat;
+  - rechts die Spieler-Panels.
+- Spieler-Panels wie V10:
+  - Farbbalken, Kopf mit Herzen und Energie, einklappbar.
+  - Original-Spielerkarte mit den Herz- und Energie-Chips auf der aktuellen Zahl (gleiche Lage wie V10), Ausrüstungsplätze als Karten und Rohstoffe als Kartenbilder mit Zahl.
+  - Spezialkarten und die Routenkarte.
+  - Die Aktionen des Menschen am Zug stehen fest unten im Panel. Das Craften ist aufklappbar.
+- Die einklappbare Seitenleiste rechts enthält Floss-Tableau (benötigt, Gruppe, Haken), Küstenfeuer-Kette und Gruppe. Ein Klick auf einen Spieler in der Gruppe springt zu seinem Panel.
+- Das Protokoll ist eine einklappbare, scrollbare Box unten rechts. Neue Einträge sind gelb hinterlegt.
+- Grosse Karten erscheinen in der Tischmitte wie in V10 (Bühne mit Titel, Karte und Text). Die Tageskarte von Tag 1 erscheint gleich beim Start.
+- Dialoge haben den V10-Stil (Kopfzeile mit Trennlinie, Schatten, Radius).
+- Farben, Schatten, Radien und Schrift stammen aus den V10-Variablen.
+- Es wurde kein V10-Code kopiert. Die Lage der Chips auf der Spielerkarte (Masse des Kartenbildes) und die CSS-Werte stammen aus V10.
+
+**Abweichungen**
+
+- Die Bereichsliste im Reiter «Regler» hat genau die 14 verlangten Bereiche. Die Schema-Bereiche sind so zugeordnet:
+  - «Routenkarten» (`routen.*`, 1 Regler) liegt unter «Fluchtwege».
+  - Die Pausen fürs KI-Tempo (`browser.*`) liegen unter «KI».
+  - «Tageskarten» zeigt `match.tage.*` (ruhige Tage, Ereignis-Tage, Lava-Karte).
+  - Die einzelnen Tages- und Spezialkarten bearbeitest du wie bisher im Reiter «Karten». Das Schema überspringt sie, und ein Link führt dorthin.
+- Ein Validator-Fehler bei einer einzelnen Karte (z. B. «Tageskarte «…»: unbekannter Effekt») verlinkt auf den Reiter «Karten», weil es dafür keinen Regler gibt.
+- Die Toolbar hat sieben Reiter statt drei. Damit sie in eine Zeile passt, werden die Texte schmaler gemacht:
+  - Unter 1960 px sind die Schalter rechts nur Symbole (👣 KI-Spur, 🃏 Karten gross), mit Tooltip.
+  - Unter 1600 px fallen Knopftexte und der Logo-Text weg, solange eine Partie läuft.
+  - Unter 1400 px zeigen die Reiter nur noch Symbole.
+  - Wie in V10 scrollt die Toolbar notfalls waagrecht.
+- Werkzeuge und Freier Tisch aus V10 gibt es in V11 nicht: Auswahl, Hand, Pinsel, Nebel, Marker, Edit-Schalter, Szenarien und Regel-Fragen fehlen. Panels und Karten lassen sich deshalb nicht verschieben.
+- Die zwei Schalter rechts in der Toolbar sind neu und haben kein V10-Gegenstück: «KI-Spur» und «Karten gross». Mit «Karten gross» aus läuft die Partie, ohne dass neue Karten in der Tischmitte erscheinen.
+- «＋ Neue Partie» fragt während einer laufenden Partie nach, beendet sie und öffnet das Setup. V10 öffnete einen Start-Dialog.
+
+**Checkliste Nachbesserung**
+
+| Punkt | Ergebnis |
+|---|---|
+| V10 und V11 nebeneinander sehen gleich aus | ✓ Im Browser verglichen (1440 × 900): gleiche Toolbar, Hinweisleiste, Tisch mit Punktmuster, Zoomleiste, Minimap, Seitenleiste, Protokoll-Box, Bühne und Spieler-Panels mit Original-Spielerkarte und Chips. Abweichungen siehe oben. |
+| Tisch scrollt nicht als Seite | ✓ Seitenhöhe = Fensterhöhe in allen Reitern. Zoom (Rad, −/+), Verschieben und Minimap getestet. |
+| Reiter «Regler» mit Bereichsliste, Suche, Presets, Export/Import | ✓ |
+| Geänderte Regler markiert und einzeln zurücksetzbar | ✓ Markierung, «↺ Standard» je Regler, Zähler oben und je Bereich. |
+| Validator-Ergebnis in Regler und Setup sichtbar, Fehler verlinken auf Regler | ✓ Getestet mit «Herzen = 20»: Der Link öffnet «Figur» und setzt den Fokus auf «Herzen». |
+| Setup enthält nur Start-relevantes | ✓ Preset, Modus, Spielerzahl, Seed, Sitze, Prüfung, Start, Link «Regler anpassen». |
+| Start springt zu «Spiel», Regler während Partie gesperrt | ✓ Inklusive «Partie beenden und entsperren». |
+| Tests grün, keine Engine-Datei geändert | ✓ `node --test test/*.test.mjs`: 55 von 55. Ein `git diff` gegen main zeigt in `engine/`, `bots/`, `sim/`, `config/` und `test/` keine Änderung. |
+| Kein ß, Umlaute als ä/ö/ü | ✓ Geprüft in `ui/`, `index.html` und `style.css`. |
+
+Zusätzlich im Browser getestet:
+
+- Ganze KI-Partien in Koop, Team und PvP bis zum Ende-Dialog.
+- Ein Menschen-Zug mit Würfeln, Aufdecken, Gehen und «Zug beenden».
+- Der Modus «sehr langsam – Weiter-Knopf» (Knopf und Enter).
+- Hot-Seat im Team-Modus mit Übergabe-Dialog; fremde Charaktere sind verdeckt.
+- Replay aus dem Ende-Dialog.
+- Alle Reiter ohne Fehler in der Konsole.

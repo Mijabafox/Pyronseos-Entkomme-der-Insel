@@ -1,9 +1,10 @@
 // Gemeinsamer Zustand der Oberfläche: aktuelle Konfiguration, Sitze, laufende Partie, Presets.
 import { standardLaden, zusammenfuehren, klon, unterschiede, setzen } from '../engine/config.js';
+import { validieren } from '../engine/validator.js';
 import { speicher } from './dom.js';
 
 export const EINGEBAUT = ['standard', 'einfach', 'hart'];
-const SCHLUESSEL = { cfg: 'v11-konfig', sitze: 'v11-sitze', presets: 'v11-presets', tempo: 'v11-tempo' };
+const SCHLUESSEL = { cfg: 'v11-konfig', sitze: 'v11-sitze', presets: 'v11-presets', tempo: 'v11-tempo', anzeige: 'v11-anzeige' };
 
 export const app = {
   standard: null, cfg: null, sitze: [], partie: null, presets: {}, eigene: {}, presetName: 'Standard V10',
@@ -13,6 +14,9 @@ export const app = {
   speichern() { speicher.schreiben(SCHLUESSEL.cfg, teilKonfig(this.cfg, this.standard)); speicher.schreiben(SCHLUESSEL.sitze, this.sitze); },
   tempo: speicher.lesen(SCHLUESSEL.tempo, { art: 'normal', pause: 2 }),
   tempoSpeichern() { speicher.schreiben(SCHLUESSEL.tempo, this.tempo); },
+  // Schalter rechts in der Toolbar: KI-Spur auf dem Brett, neue Karten gross in der Tischmitte zeigen.
+  anzeige: { spur: true, buehne: true, ...speicher.lesen(SCHLUESSEL.anzeige, {}) },
+  anzeigeSpeichern() { speicher.schreiben(SCHLUESSEL.anzeige, this.anzeige); },
   eigeneSpeichern() { speicher.schreiben(SCHLUESSEL.presets, this.eigene); },
 };
 
@@ -53,3 +57,15 @@ export function presetLaden(teil, name) {
   app.speichern();
   app.melden('konfig');
 }
+
+// Spielerzahl der aktuellen Konfiguration (Team ist immer 2 gegen 2).
+export function spielerZahl(cfg = app.cfg) { return cfg.match.modus === 'team' ? 2 * cfg.match.teamGroesse : cfg.match.spieler; }
+
+// Prüfergebnis der aktuellen Konfiguration (Setup und Regler zeigen dasselbe).
+export function pruefen(cfg = app.cfg) { return validieren(cfg, { modus: cfg.match.modus, spieler: spielerZahl(cfg) }); }
+
+// Anzahl der Werte, die vom Standard V10 abweichen (ohne Name des Presets).
+export function geaendertZahl(cfg = app.cfg) { return unterschiede(app.standard, cfg).filter((u) => !u.pfad.startsWith('meta')).length; }
+
+// Laufende Partie beenden, damit Setup und Regler wieder offen sind.
+export function partieBeenden() { app.partie?.beenden(); app.partie = null; app.melden('partie'); }
