@@ -16,13 +16,13 @@ export function simZeigen(el) {
   const presetOpt = [...EINGEBAUT.map((n) => [`e:${n}`, app.presets[n]?.meta?.name ?? n]), ...Object.keys(app.eigene).map((n) => [`u:${n}`, `★ ${n}`])].map(([k, n]) => `<option value="${k}" ${ein.presetB === k ? 'selected' : ''}>${esc(n)}</option>`).join('');
   const pfade = regler(c).filter((r) => r.typ !== 'auswahl' || r.pfad === 'match.modus').map((r) => `<option value="${r.pfad}">${esc(r.name)}</option>`).join('');
   el.innerHTML = `<div class="kasten"><h2>📊 Simulation</h2>
-    <p class="hinweis">Nutzt die aktuelle Konfiguration «${esc(app.presetName)}» aus dem Setup und dieselbe Engine wie das Spiel. Jede Partie hat einen eigenen Seed (Start-Seed, +1, +2 …): gleiche Einstellungen ergeben exakt dieselben Zahlen. Über die Kommandozeile: <code>node sim/cli.mjs --hilfe</code>.</p>
+    <p class="hinweis">Nutzt die aktuelle Konfiguration «${esc(app.presetName)}» (Regler und Startdialog) und dieselbe Engine wie das Spiel. Jede Partie hat einen eigenen Seed (Start-Seed, +1, +2 …): gleiche Einstellungen ergeben exakt dieselben Zahlen. Über die Kommandozeile: <code>node sim/cli.mjs --hilfe</code>.</p>
     <div class="zeile"><label>Art <select id="art">${[['serie', 'Serie (Auswertung)'], ['sweep', 'Parameter-Sweep'], ['ab', 'A/B-Vergleich'], ['import', 'Abgleich mit echten Partien']].map(([k, n]) => `<option value="${k}" ${ein.art === k ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label>Partien <input type="number" id="partien" min="1" max="5000" value="${ein.partien}"/></label>
       <label>Start-Seed <input type="number" id="seed" min="0" value="${ein.seed}"/></label>
-      <span class="hinweis">Modus ${esc(c.match.modus)} · ${c.match.modus === 'team' ? 4 : c.match.spieler} Spieler (im Setup änderbar)</span></div>
+      <span class="hinweis">Modus ${esc(c.match.modus)} · ${c.match.modus === 'team' ? 4 : c.match.spieler} Spieler (im Startdialog änderbar)</span></div>
     <div class="zeile" style="margin-top:6px"><label>Bot-Zusammensetzung <input id="bots" value="${esc(ein.bots)}" style="width:18em" title="Stufe je Sitz, durch Komma getrennt"/></label>
-      <span class="hinweis">Stufen: ${Object.entries(STUFEN).map(([k, x]) => `${k} (${x.name})`).join(', ')} · Persönlichkeit aus den Sitzen im Setup: <label><input type="checkbox" id="sitzeNutzen" ${ein.sitzeNutzen ? 'checked' : ''}/> verwenden</label></span></div>
+      <span class="hinweis">Stufen: ${Object.entries(STUFEN).map(([k, x]) => `${k} (${x.name})`).join(', ')} · Persönlichkeit aus den Sitzen im Startdialog: <label><input type="checkbox" id="sitzeNutzen" ${ein.sitzeNutzen ? 'checked' : ''}/> verwenden</label></span></div>
     <div id="sweepFelder" class="zeile" style="margin-top:6px" ${ein.art === 'sweep' ? '' : 'hidden'}>
       <datalist id="pfade">${pfade}<option value="match.spieler">Spielerzahl</option></datalist>
       <label>Parameter A <input id="pfadA" list="pfade" value="${esc(ein.pfadA)}" style="width:22em"/></label><label>Werte <input id="werteA" value="${esc(ein.werteA)}" style="width:6em" title="1:4 oder 1:4:1 oder 1,2,3"/></label>

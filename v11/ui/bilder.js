@@ -26,3 +26,14 @@ export const bild = {
   charakterRueckseite: './spieler/rueckseite.png',
   herz: './chips/herz.png', energie: './chips/energie.png',
 };
+
+// Lage der Zahlenreihe auf der Spielerkarte (Originalbild 1752 × 1068), wie V10.
+const KARTE = { breite: 1752, hoehe: 1068, zahl0: 0.121, zahl6: 0.491, herzY: 0.66, energieY: 0.861, chip: 0.056 };
+
+// Chip auf der Zahlenreihe der Spielerkarte (0 bis 6), Lage in Prozent.
+export function chipOrt(wert, art) {
+  const x = (KARTE.zahl0 + ((KARTE.zahl6 - KARTE.zahl0) * Math.max(0, Math.min(6, wert))) / 6) * 100;
+  const y = (art === 'herz' ? KARTE.herzY : KARTE.energieY) * 100;
+  const w = KARTE.chip * 100, h = ((KARTE.chip * KARTE.breite) / KARTE.hoehe) * 100;
+  return `left:${(x - w / 2).toFixed(2)}%;top:${(y - h / 2).toFixed(2)}%;width:${w.toFixed(2)}%;height:${h.toFixed(2)}%`;
+}

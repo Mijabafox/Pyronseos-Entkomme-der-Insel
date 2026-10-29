@@ -1,6 +1,6 @@
 // Toolbar oben wie in V10: Modus-Pille, Reiter, Tag mit Wetter und Seed, KI-Tempo, Knöpfe, Schalter rechts.
 import { $, esc } from './dom.js';
-import { app, partieBeenden } from './zustand.js';
+import { app } from './zustand.js';
 import { tagesKarteDef } from '../engine/effekte.js';
 import { MODUS_KURZ } from '../engine/namen.js';
 
@@ -10,15 +10,28 @@ const TEMPO = [['schnell', 'schnell'], ['normal', 'normal'], ['langsam', 'langsa
 export function toolbarZeichnen(teil = 'alle') {
   const p = app.partie, s = p?.sl.s;
   const imSpiel = app.aktuellerReiter?.() === 'spiel';
+  // Freier Tisch: eigene Werkzeugleiste wie V10 (Modus-Badge «Frei»).
+  $('#tbModus').classList.toggle('frei', !!app.frei);
+  $('#toolbar').classList.toggle('frei-modus', !!app.frei && imSpiel);
+  if (app.frei) {
+    $('#tbModus').textContent = 'Frei';
+    $('#tbModus').title = 'Freier Tisch: keine Regelprüfung, nur Menschen';
+    if (imSpiel) { app.frei.toolbar(teil); return; }
+    // In den anderen Reitern: Werkzeuge des Tisches ausblenden (sie wirken nur auf dem Tisch).
+    $('#tbTag').hidden = true; $('#tbTempo').innerHTML = ''; $('#tbKnoepfe').innerHTML = '';
+    $('#tbRechts').innerHTML = '<button type="button" class="haupt" id="tbNeu" title="Neue Partie">＋<span class="tb-text"> Neue Partie</span></button>';
+    $('#tbNeu').addEventListener('click', () => app.neuePartieDialog());
+    return;
+  }
   $('#tbModus').textContent = MODUS_KURZ[s?.modus ?? app.cfg.match.modus] ?? '';
-  $('#tbModus').title = s ? 'Modus der laufenden Partie' : 'Modus der nächsten Partie (im Setup änderbar)';
+  $('#tbModus').title = s ? 'Modus der laufenden Partie' : 'Modus der nächsten Partie (im Startdialog änderbar)';
 
   const tag = $('#tbTag');
   tag.hidden = !s;
   if (s) {
     const d = tagesKarteDef(s);
-    tag.innerHTML = `<span class="tag-anzeige">Tag <b>${s.tag}</b>/${s.tag + s.tagesStapel.length}</span>
-      <button type="button" class="wetter" id="tbWetter" title="${esc(d?.text ?? 'Tageskarte')} – Klick: gross zeigen">${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')}</button>
+    tag.innerHTML = `<span class="tag-anzeige" title="Seed ${s.seed}">Tag <b>${s.tag}</b>/${s.tag + s.tagesStapel.length}</span>
+      <button type="button" class="wetter" id="tbWetter" title="${esc(d?.text ?? 'Tageskarte')} – Klick: gross zeigen">${esc(d?.symbol ?? '')}<span class="wetter-text"> ${esc(d?.name ?? '')}</span></button>
       <span class="tb-seed" title="Seed: dieselbe Zahl ergibt dieselbe Insel und dieselbe Partie">🌱<span class="tb-text"> Seed</span> <b>${s.seed}</b></span>`;
     $('#tbWetter').addEventListener('click', () => p.tagKarteZeigen());
   }
@@ -40,13 +53,10 @@ export function toolbarZeichnen(teil = 'alle') {
   $('#tbRechts').innerHTML = `<label class="schalter" title="Letzte Bewegungen der KI als Linie auf dem Brett"><input type="checkbox" id="tbSpur" ${a.spur ? 'checked' : ''}/><span>👣<span class="tb-text"> KI-Spur</span></span></label>
     <label class="schalter" title="Neue Tages- und Spezialkarten gross in der Tischmitte zeigen"><input type="checkbox" id="tbBuehne" ${a.buehne ? 'checked' : ''}/><span>🃏<span class="tb-text"> Karten gross</span></span></label>
     <button type="button" id="tbZentrieren" title="Ansicht zentrieren" ${s && imSpiel ? '' : 'disabled'}>⌖</button>
-    <button type="button" class="haupt" id="tbNeu" title="Neue Partie (Setup)">＋<span class="tb-text"> Neue Partie</span></button>`;
+    <button type="button" class="haupt" id="tbNeu" title="Neue Partie">＋<span class="tb-text"> Neue Partie</span></button>`;
   $('#tbSpur').addEventListener('change', (e) => { a.spur = e.target.checked; app.anzeigeSpeichern(); app.partie?.render(); });
   $('#tbBuehne').addEventListener('change', (e) => { a.buehne = e.target.checked; app.anzeigeSpeichern(); });
   $('#tbZentrieren').addEventListener('click', () => app.partie?.zentrieren());
-  $('#tbNeu').addEventListener('click', () => {
-    if (app.partieLaeuft()) { if (!confirm('Die laufende Partie beenden und eine neue einrichten?')) return; partieBeenden(); }
-    app.reiter('setup');
-  });
+  $('#tbNeu').addEventListener('click', () => app.neuePartieDialog());
 }
 app.toolbar = toolbarZeichnen;

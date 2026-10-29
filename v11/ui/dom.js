@@ -27,6 +27,8 @@ export const speicher = {
 
 export function dialog(html, { breit = false } = {}) {
   const d = $('#dialog');
+  if (d.open && !d.matches(':modal')) d.close(); // z. B. der nicht-modale Startdialog
+  d.onkeydown = null;
   d.innerHTML = `<div class="dialog-rahmen${breit ? ' breit' : ''}">${html}</div>`;
   if (!d.open) d.showModal();
   return d;
