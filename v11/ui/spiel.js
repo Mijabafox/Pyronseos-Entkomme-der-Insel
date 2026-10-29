@@ -9,26 +9,29 @@ import {
   zielStrand, flossKosten, wrackKosten, kasseGesamt, kasseAufFeld, handelPartner, rezeptKosten, kampfBonus, tierZiel, siegChance,
   beuteKategorien, MODUS_NAME, TEAM_NAMEN,
 } from '../engine/engine.js';
-import { gruppe, herzenMax, fliehende, istGross } from '../engine/kern.js';
+import { gruppe, herzenMax, fliehende, istGross, gruppenSchluessel } from '../engine/kern.js';
 import { sicht } from '../engine/sicht.js';
 import { tagesKarteDef } from '../engine/effekte.js';
 import { STRANDRING } from '../engine/brett.js';
 import { pixel } from '../engine/hex.js';
 import { Spielleiter } from '../sim/spielleiter.js';
 import { zusammenfassungAus } from '../sim/simulation.js';
-import { brettSvg, HALB, SE } from './brett.js';
+import { brettSvg, HALB, SE, RAHMEN } from './brett.js';
 import { bild, spielerFarbe } from './bilder.js';
 import { spezialKarte, tagesKarte, rueckseite, routenKarte } from './karten.js';
 import { ROHSTOFF, ROHSTOFF_SYMBOL, REZEPT, TIER, ENDE, BIOM } from '../engine/namen.js';
 import { STUFEN } from '../bots/bot.js';
+import { charakterText, rezeptName, rezeptSymbol } from './texte.js';
 
 const TEMPO = { schnell: 60, normal: 350, langsam: 900 };
 const TEAM_SYMBOL = ['☀️', '🌙'];
 
 // Welt-Koordinaten in Pixeln, Brettmitte = (0, 0).
-const B = 420; // halbe Brettgrösse (Brett etwa 2,6 Panels breit wie in V10)
-const WELT = { x: -800, y: -470, w: 1960, h: 1260 }; // alles, was auf dem Tisch liegt
-const PANEL_ORT = [[460, -420], [800, -420], [460, 200], [800, 200]];
+// Tischgeometrie wie V10: Brett 1:1 in SVG-Einheiten, Stapel links, Panels rechts (x 520 und 860).
+const B = HALB; // halbe Brettgrösse
+const WELT = { x: -1210, y: -500, w: 2420, h: 1010 }; // alles, was auf dem Tisch liegt
+const PANEL_ORT = [[520, -470], [860, -470], [520, 0], [860, 0]];
+const STAPEL_IM_RAHMEN = { tag: 'oben_rechts', spezial: 'unten_rechts', route: 'unten_links' };
 const ZOOM = { min: 0.12, max: 2.5 };
 // Lage der Zahlenreihe auf der Spielerkarte (Originalbild 1752 × 1068), wie V10.
 const KARTE = { breite: 1752, hoehe: 1068, zahl0: 0.121, zahl6: 0.491, herzY: 0.66, energieY: 0.861, chip: 0.056 };
@@ -46,21 +49,6 @@ export function spielZeigen(el) {
     return;
   }
   app.partie.einhaengen(el);
-}
-
-// Charakter-Fähigkeit in einem Satz, aus der Konfiguration.
-function charakterText(cfg, id) {
-  const c = cfg.charaktere[id];
-  if (!c) return '';
-  switch (id) {
-    case 'ueberlebenskuenstler': return `${c.herzen} Herzen statt ${cfg.figur.herzen}`;
-    case 'jaeger': return `+${c.kampf} im Tierkampf`;
-    case 'kundschafter': return `+${c.kacheln} Kachel bei der Weitsicht`;
-    case 'laeufer': return `bei 0 Energie noch ${c.zusatzfelder} Zusatzfeld (1× pro Zug)`;
-    case 'sanitaeter': return `Bandage kostet nur ${rohstoffText(c.bandageKosten)}`;
-    case 'sammlerin': return `beim Abbau W${c.wuerfel}: ab ${c.schwelle} +${c.bonus} Rohstoff`;
-    default: return '';
-  }
 }
 
 const teamIndex = (s, i) => (s.teams ? (s.teams[0].includes(s.spieler[i].id) ? 0 : 1) : null);
@@ -287,12 +275,12 @@ class Partie {
       spur: app.anzeige.spur ? this.spur : [], sammelfeld: s.sammelfeld,
       zielStrand: richtungSichtbar ? new Set(zielStrand(s, g)) : new Set(),
       hervor: this.sitze[entscheider(s)]?.ki ? s.spieler[s.aktiv].feld : null,
+      trinken: !s.ende && !this.sitze[entscheider(s)]?.ki && erlaubteAktionen(s).some((a) => a.typ === 'trinken') ? s.spieler[s.aktiv].feld : null,
     });
     const inhalt = $('.welt-inhalt', this.el);
     const scroll = new Map($$('.spieler-panel', inhalt).map((p) => [p.dataset.panel, $('.panel-inhalt', p)?.scrollTop ?? 0]));
     inhalt.innerHTML = `
       <div class="brett-platz" style="left:${-B}px;top:${-B}px;width:${2 * B}px;height:${2 * B}px">${svg}</div>
-      <div class="auslage-titel" style="left:-770px;top:-450px">Stapel · Würfel · Vorrat</div>
       ${this.stapelHtml(sv)}
       ${sv.spieler.map((p, i) => this.panelHtml(sv, p, i, b)).join('')}`;
     for (const p of $$('.spieler-panel', inhalt)) { const i = $('.panel-inhalt', p); if (i) i.scrollTop = scroll.get(p.dataset.panel) ?? 0; }
@@ -307,30 +295,37 @@ class Partie {
 
   stapelHtml(sv) {
     const s = this.sl.s;
-    const stapel = (x, y, name, karte, zahl, extra = '') => `<div class="stapel" style="left:${x}px;top:${y}px"${extra}><div class="stapel-karten">${karte}</div><div class="stapel-name">${name}</div><div class="stapel-zahl">${zahl}</div></div>`;
     const d = tagesKarteDef(s);
-    const tier = `<div class="tier-beutel">🐾<b>${s.tierBeutel.length}</b></div>`;
+    const zahl = (n) => `${n} Karte${n === 1 ? '' : 'n'}`;
+    // Tages-, Spezial- und Routenkarten liegen wie in V10 in den Rahmen des Brettbildes.
+    const imRahmen = (id, name, n, extra = '') => {
+      const r = RAHMEN[STAPEL_IM_RAHMEN[id]];
+      return `<div class="stapel auf-brett" style="left:${r.x.toFixed(1)}px;top:${r.y.toFixed(1)}px;width:${r.breite.toFixed(1)}px;height:${r.hoehe.toFixed(1)}px" title="${esc(name)} – Karten zieht das Spiel selbst">
+        <div class="stapel-karten">${rueckseite(id, `brett-stapel${n ? '' : ' leer'}`)}</div>
+        <div class="stapel-info"><div class="stapel-name">${esc(name)}</div><div class="stapel-zahl">${zahl(n)}</div>${extra}</div></div>`;
+    };
+    const stapel = (x, y, name, karte, unter, extra = '') => `<div class="stapel" style="left:${x}px;top:${y}px"${extra}><div class="stapel-karten">${karte}</div><div class="stapel-name">${name}</div><div class="stapel-zahl">${unter}</div></div>`;
     const wuerfe = s.wuerfe.slice(-6);
     const letzter = wuerfe.at(-1);
     const vorrat = sv.vorrat;
     return [
-      stapel(-770, -420, 'Tagesstapel', rueckseite('tag', 'mini'), `${s.tagesStapel.length} Karten`),
-      stapel(-630, -420, 'Heute', `<div data-tageskarte title="${esc(d?.text ?? '')} – Klick: gross">${tagesKarte(this.cfg, s.tagesKarte, 'mini')}</div>`, `${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')}`),
-      stapel(-770, -200, 'Spezialkarten', rueckseite('spezial', 'mini'), `${s.spezialStapel.length} · Ablage ${s.spezialAblage.length}`),
-      stapel(-630, -200, 'Ablage', s.spezialAblage.length ? `<div data-gross="Spezial-Ablage">${spezialKarte(this.cfg, s.spezialAblage.at(-1), 'mini')}</div>` : '<div class="karte mini leer"></div>', s.spezialAblage.length ? 'oberste Karte' : 'leer'),
-      stapel(-770, 20, 'Routenkarten', rueckseite('route', 'mini'), `${s.routenStapel.length} Karten`),
-      stapel(-630, 20, 'Tierbeutel', tier, `Ablage ${s.tierAblage.length}`),
-      `<div class="wuerfelschale" style="left:-770px;top:250px"><div class="schale-titel">🎲 Würfelschale</div>
+      imRahmen('tag', 'Tageskarten', s.tagesStapel.length, `<div class="stapel-zahl">Ablage ${s.tagesAblage.length}</div>`),
+      imRahmen('spezial', 'Spezialkarten', s.spezialStapel.length, `<div class="stapel-zahl">Ablage ${s.spezialAblage.length}</div>`),
+      imRahmen('route', 'Routenkarten', s.routenStapel.length),
+      `<div class="vorrat-auslage" style="left:-1190px;top:-470px"><div class="schale-titel">🪵 Rohstoffkarten ${vorrat ? '<span class="hinweis">Vorrat</span>' : '<span class="hinweis">Vorrat unbegrenzt</span>'}</div>
+        <div class="rohstoff-karten">${ROHSTOFFE.map((r) => `<div class="rohstoff-karte${vorrat && !vorrat[r] ? ' null' : ''}" title="${ROHSTOFF[r]}: ${vorrat ? vorrat[r] : '∞'}"><img src="${bild.rohstoff(r)}" alt="${ROHSTOFF[r]}" draggable="false"/><b>${vorrat ? vorrat[r] : '∞'}</b></div>`).join('')}</div></div>`,
+      stapel(-1190, -290, 'Heute', `<div data-tageskarte title="${esc(d?.text ?? '')} – Klick: gross">${tagesKarte(this.cfg, s.tagesKarte, 'mini')}</div>`, `${esc(d?.symbol ?? '')} ${esc(d?.name ?? '')} · Klick = gross`),
+      stapel(-1015, -290, 'Spezial-Ablage', s.spezialAblage.length ? `<div data-gross="Spezial-Ablage: ${esc(s.cfg.spezialkarten.karten[s.spezialAblage.at(-1)]?.name ?? '')}">${spezialKarte(this.cfg, s.spezialAblage.at(-1), 'mini')}</div>` : '<div class="karte mini leer"></div>', s.spezialAblage.length ? 'oberste Karte · Klick = gross' : 'leer'),
+      stapel(-1190, -40, 'Tier-Zugbeutel', `<div class="beutel${s.tierBeutel.length ? '' : ' leer'}"><div class="beutel-knoten"></div><div class="beutel-motiv">🐾</div><div class="beutel-name">${s.tierBeutel.length}</div></div>`, `${zahl(s.tierBeutel.length)} · Ablage ${s.tierAblage.length}`),
+      `<div class="wuerfelschale" style="left:-1190px;top:290px"><div class="schale-titel">🎲 Würfelschale</div>
         <div class="schale-boden">${wuerfe.length ? wuerfe.map((w) => `<div class="wuerfel w-${w.wuerfel}" style="--farbe:${spielerFarbe[w.spieler] ?? 'var(--primaer)'}" title="${esc(w.zweck ?? '')}"><span class="w-art">${w.wuerfel}</span><span class="w-wert">${w.wert}</span></div>`).join('') : '<span class="leer-hinweis">leer</span>'}</div>
         <div class="schale-zweck">${letzter ? `${esc(s.spieler[letzter.spieler]?.name ?? '')}: ${esc(letzter.zweck ?? '')}` : 'Noch nicht gewürfelt'}</div></div>`,
-      `<div class="vorrat-auslage" style="left:-770px;top:420px"><div class="schale-titel">📦 Materialvorrat ${vorrat ? '' : '<span class="hinweis">unbegrenzt</span>'}</div>
-        <div class="rohstoff-karten">${ROHSTOFFE.map((r) => `<div class="rohstoff-karte${vorrat && !vorrat[r] ? ' null' : ''}" title="${ROHSTOFF[r]}: ${vorrat ? vorrat[r] : '∞'}"><img src="${bild.rohstoff(r)}" alt="${ROHSTOFF[r]}" draggable="false"/><b>${vorrat ? vorrat[r] : '∞'}</b></div>`).join('')}</div></div>`,
     ].join('');
   }
 
   panelHtml(sv, p, i, b) {
     const s = this.sl.s;
-    const [x, y] = PANEL_ORT[i] ?? [460 + (i % 2) * 340, -420 + Math.floor(i / 2) * 620];
+    const [x, y] = PANEL_ORT[i] ?? [520 + (i % 2) * 340, -470 + Math.floor(i / 2) * 470];
     const aktiv = i === entscheider(s) && !s.ende;
     const menschAmZug = aktiv && !this.sitze[i].ki;
     const offen = menschAmZug || !this.panelZu.has(i);
@@ -348,7 +343,7 @@ class Partie {
       : `<div class="spielerkarte verdeckt"><img src="${bild.charakterRueckseite}" alt="Spielerkarte (verdeckt)" draggable="false"/><div class="sk-werte"><span title="Herzen"><img src="${bild.herz}" alt=""/> ${p.herzen}/${max}</span><span title="Energie"><img src="${bild.energie}" alt=""/> ${p.energie}/${s.cfg.figur.energie}</span></div></div>`;
     const platz = (id, name, hat) => `<div class="ausruestung-karte${hat ? '' : ' leer'}" title="${esc(hat ? name : `${name}: noch nicht gebaut`)}">${hat && bild.werkzeug(id) ? `<img src="${bild.werkzeug(id)}" alt="${esc(name)}" draggable="false"/>` : `<span>${esc(name)}</span>`}</div>`;
     const waffe = p.ausruestung.waffe;
-    const ausruestung = `<div class="ausruestung-karten">${platz('axt', 'Steinaxt', p.ausruestung.axt)}${platz('hacke', 'Spitzhacke', p.ausruestung.hacke)}${platz(waffe, waffe ? REZEPT[waffe]?.name ?? 'Waffe' : 'Waffe', !!waffe)}</div>`;
+    const ausruestung = `<div class="ausruestung-karten">${platz('axt', 'Steinaxt', p.ausruestung.axt)}${platz('hacke', 'Spitzhacke', p.ausruestung.hacke)}${platz(waffe, waffe ? rezeptName(waffe) : 'Waffe', !!waffe)}</div>`;
     const rohstoffe = p.hand
       ? `<div class="rohstoff-karten">${ROHSTOFFE.map((r) => `<div class="rohstoff-karte${p.hand[r] ? '' : ' null'}" title="${ROHSTOFF[r]}: ${p.hand[r]}"><img src="${bild.rohstoff(r)}" alt="${ROHSTOFF[r]}" draggable="false"/><b>${p.hand[r]}</b></div>`).join('')}</div>`
       : `<div class="rohstoffe verdeckt">🂠 ${p.anzahlRohstoffe ?? 0} Rohstoffe verdeckt</div>`;
@@ -388,7 +383,7 @@ class Partie {
       default: {
         teile.push('<div class="hinweis">Feld auf dem Brett anklicken = gehen. Abbau beendet die Bewegung. Trinken beendet den Zug.</div>');
         teile.push(`<div class="knopf-reihe">${knopf({ typ: 'abbauen' }, '⛏ Abbauen')}${knopf({ typ: 'trinken' }, '💧 Trinken (Zugende)', false, trinkenGrund(s) === 'kein Wasserfeld' ? null : trinkenGrund(s))}${knopf({ typ: 'essen' }, '🍖 Essen')}${knopf({ typ: 'kompassBergen' }, '🧭 Kompass bergen')}</div>`);
-        teile.push(`<details class="rezepte"><summary>🛠 Craften</summary><div class="rezept-raster">${Object.keys(s.cfg.crafting.rezepte).filter((r) => s.cfg.crafting.rezepte[r].aktiv).map((r) => knopf({ typ: 'craften', rezept: r }, `${REZEPT[r]?.symbol ?? ''} ${REZEPT[r]?.name ?? r} <small>${rohstoffText(rezeptKosten(s, p, r))}</small>`, false, craftGrund(s, r))).join('')}</div></details>`);
+        teile.push(`<details class="rezepte"><summary>🛠 Craften</summary><div class="rezept-raster">${Object.keys(s.cfg.crafting.rezepte).filter((r) => s.cfg.crafting.rezepte[r].aktiv).map((r) => knopf({ typ: 'craften', rezept: r }, `${rezeptSymbol(r)} ${rezeptName(r)} <small>${rohstoffText(rezeptKosten(s, p, r))}</small>`, false, craftGrund(s, r))).join('')}</div></details>`);
         teile.push(`<div class="knopf-reihe">${knopf({ typ: 'flossBauen', art: 'solide' }, '🛶 Solides Floss', true, flossGrund(s, 'solide'))}${knopf({ typ: 'flossBauen', art: 'not' }, '🛶 Not-Floss (W6)', false, flossGrund(s, 'not'))}${knopf({ typ: 'wrackReparieren' }, '✈️ Wrack reparieren', true, wrackGrund(s))}</div>`);
         const extra = ak.filter((a) => ['reanimieren', 'sammelfeld', 'angreifen', 'duell'].includes(a.typ)).map((a) => knopf(a, a.typ === 'reanimieren' ? `🩹 ${esc(s.spieler[a.ziel].name)} reanimieren` : a.typ === 'sammelfeld' ? `📍 Sammelfeld Strand ${s.felder[a.feld].kuestenNr}` : a.typ === 'angreifen' ? `⚔️ ${esc(s.spieler[a.ziel].name)} angreifen` : `⚔️ Duell-Karte gegen ${esc(s.spieler[a.ziel].name)}`));
         if (extra.length) teile.push(`<div class="knopf-reihe">${extra.join('')}</div>`);
@@ -417,22 +412,52 @@ class Partie {
     $('[data-leiste-klapp]', el).addEventListener('click', () => { this.leisteZu = !this.leisteZu; this.renderLeiste(); this.minimapZeichnen(); });
   }
 
+  // Floss-Tableau wie V10: benötigt, Gruppe, Sammelfeld, «Fehlt noch» und Haken-Liste.
   flossHtml(sv, b) {
     const s = this.sl.s;
+    const fw = s.cfg.fluchtwege;
+    if (!fw.floss.aktiv && !fw.wrack.aktiv) return '';
     const g = gruppe(s, b ?? s.aktiv);
-    if (!s.cfg.fluchtwege.floss.aktiv && !s.cfg.fluchtwege.wrack.aktiv) return '';
+    const koop = s.modus === 'koop';
     const kasse = sv.spieler.every((p, k) => !g.includes(k) || p.hand) ? kasseGesamt(s, g) : null;
-    const tabelle = (titel, kosten) => {
-      const zeilen = ROHSTOFFE.filter((r) => kosten[r]).map((r) => `<tr class="${kasse && kasse[r] >= kosten[r] ? 'ok' : ''}"><td>${ROHSTOFF_SYMBOL[r]} ${ROHSTOFF[r]}</td><td>${kosten[r]}</td><td>${kasse ? kasse[r] : '?'}</td><td><span class="haken">${kasse && kasse[r] >= kosten[r] ? '✓' : '○'}</span></td></tr>`).join('');
-      return `<div class="floss-teil"><b>${titel}</b><table class="floss-tabelle"><tr><th></th><th title="pro Person × fliehende Figuren">benötigt</th><th title="Vorrat der Gruppe">Gruppe</th><th></th></tr>${zeilen}</table></div>`;
+    const amSammel = koop && s.sammelfeld ? kasseAufFeld(s, s.sammelfeld, g) : null;
+    const teil = (titel, kosten, klein = false, zusatz = '') => {
+      const arten = ROHSTOFFE.filter((r) => kosten[r]);
+      const zeilen = arten.map((r) => {
+        const ok = kasse && kasse[r] >= kosten[r];
+        return `<tr class="${ok ? 'ok' : ''}"><td>${ROHSTOFF_SYMBOL[r]} ${ROHSTOFF[r]}</td><td>${kosten[r]}</td><td>${kasse ? kasse[r] : '?'}</td><td>${amSammel ? amSammel[r] : '–'}</td><td><span class="haken">${ok ? '✓' : '○'}</span></td></tr>`;
+      }).join('');
+      const fehlt = kasse ? arten.filter((r) => kasse[r] < kosten[r]).map((r) => `${kosten[r] - kasse[r]} ${ROHSTOFF[r]}`).join(', ') : null;
+      return `<div class="floss-teil${klein ? ' klein' : ''}"><b>${titel}</b><table class="floss-tabelle"><tr><th></th><th title="pro Person × fliehende Figuren">benötigt</th><th title="Vorrat der Gruppe insgesamt">Gruppe</th><th title="Figuren auf dem Sammelfeld">Sammelf.</th><th></th></tr>${zeilen}</table>
+        <div class="fehlt-zeile">${fehlt === null ? '<span class="hinweis">Rohstoffe der anderen verdeckt</span>' : fehlt ? `Fehlt noch: <b>${fehlt}</b>` : '<span class="erfuellt">✓ Material komplett</span>'}${zusatz}</div></div>`;
     };
     const besitzer = routenBesitzer(s, g);
-    const route = besitzer === null ? 'Routenkarte fehlt (Kompass mit der Spitzhacke bergen)' : `Routenkarte bei ${esc(s.spieler[besitzer].name)}${sv.spieler[besitzer].route !== 'verdeckt' ? `: Abschnitt <b>${esc(sv.spieler[besitzer].route)}</b>` : ''}`;
+    const richtung = besitzer === null ? null : sv.spieler[besitzer].route;
+    const ziel = new Set(zielStrand(s, g));
     const n = fliehende(s);
-    return `<section class="floss-tableau" aria-label="Floss-Tableau"><h3>🛶 Floss und ✈️ Wrack <span class="hinweis">für ${n} Figur${n === 1 ? '' : 'en'}</span></h3>
-      ${s.cfg.fluchtwege.floss.aktiv ? tabelle('Solides Floss', flossKosten(s, 'solide')) + (s.cfg.fluchtwege.floss.not.aktiv ? tabelle('Not-Floss <span class="hinweis">(W6, Gruppenwurf)</span>', flossKosten(s, 'not')) : '') : ''}
-      ${s.cfg.fluchtwege.wrack.aktiv ? tabelle(`Flugzeugwrack${s.cfg.fluchtwege.wrack.brennsprit ? ' <span class="hinweis">+ 🧪 Brennsprit</span>' : ''}`, wrackKosten(s)) : ''}
-      <ul class="haken-liste"><li>${besitzer === null ? '○' : '✓'} ${route}</li>${s.modus === 'koop' && s.sammelfeld ? `<li>📍 Sammelfeld Strand ${s.felder[s.sammelfeld].kuestenNr}</li>` : ''}${tagesKarteDef(s)?.effekte?.some((e) => e.typ === 'flossSperre') ? '<li class="fehler">Sturm: heute keine Floss-Flucht</li>' : ''}</ul></section>`;
+    const amOrt = koop ? (s.sammelfeld ? g.filter((i) => s.spieler[i].feld === s.sammelfeld && !s.spieler[i].liegt && !s.spieler[i].ausgeschieden).length : 0)
+      : Math.max(0, ...[...ziel].map((f) => g.filter((i) => s.spieler[i].feld === f && !s.spieler[i].liegt).length));
+    const amBoden = g.filter((i) => s.spieler[i].liegt).length;
+    const sturm = tagesKarteDef(s)?.effekte?.some((e) => e.typ === 'flossSperre');
+    const haken = [
+      [besitzer !== null, besitzer !== null ? `Routenkarte auf der Hand (${esc(s.spieler[besitzer].name)})${richtung && richtung !== 'verdeckt' ? `: Abschnitt <b>${esc(richtung)}</b>` : ''}` : 'Routenkarte auf der Hand (Kompass mit der Spitzhacke bergen)'],
+      [besitzer !== null && ziel.has(s.spieler[besitzer].feld), 'wer die Routenkarte hat, steht am Zielstrand und gibt sie beim Bau ab'],
+      ...(koop ? [[s.sammelfeld !== null, s.sammelfeld ? `Sammelfeld gewählt: Strandfeld <b>${s.felder[s.sammelfeld].kuestenNr}</b>` : 'Sammelfeld gewählt']] : []),
+      [amOrt >= n, `alle fliehenden Figuren am Ort (${amOrt}/${n})${koop ? '' : ' – auf einem Feld im Abschnitt'}`],
+      [amBoden === 0, amBoden === 0 ? 'niemand am Boden' : `niemand am Boden (${amBoden} ${amBoden === 1 ? 'liegt' : 'liegen'})`],
+      [!sturm, 'heute kein «Sturm»'],
+    ];
+    const notFloss = s.notFloss?.[gruppenSchluessel(s, g[0] ?? s.aktiv)];
+    const notZusatz = notFloss?.feld && s.felder[notFloss.feld] ? ` · liegt auf Strandfeld ${s.felder[notFloss.feld].kuestenNr} bereit` : '';
+    const ziel1 = koop ? `für ${n} Figuren` : s.modus === 'team' ? 'für das Team (2 Figuren)' : 'für 1 Figur';
+    return `<section class="floss-tableau" aria-label="Floss-Tableau">
+      ${fw.floss.aktiv ? `<h3>🛶 Floss <span class="hinweis">${ziel1}</span></h3>
+      <div class="hinweis">Pro Person: solide ${rohstoffText(fw.floss.solide.proPerson)}${fw.floss.not.aktiv ? ` · Not-Floss ${rohstoffText(fw.floss.not.proPerson)}` : ''} · kein Segel</div>
+      ${teil('Solides Floss', flossKosten(s, 'solide'))}
+      ${fw.floss.not.aktiv ? teil(`Not-Floss <span class="hinweis">(W6${koop ? ', Gruppenwurf' : ''})</span>`, flossKosten(s, 'not'), true, notZusatz) : ''}
+      <ul class="haken-liste">${haken.map(([ok, t]) => `<li><span class="haken${ok ? ' ok' : ''}">${ok ? '✓' : '○'}</span> ${t}</li>`).join('')}</ul>` : ''}
+      ${fw.wrack.aktiv ? `<h3 class="abstand-oben">✈️ Flugzeugwrack <span class="hinweis">${fw.wrack.brennsprit ? 'plus 🧪 Brennsprit' : ''}</span></h3>${teil('Reparatur', wrackKosten(s), true)}` : ''}
+    </section>`;
   }
 
   ketteHtml(s, b) {
@@ -449,14 +474,24 @@ class Partie {
     return `<section class="ketten-leiste"><h3>🔥 Küstenfeuer-Kette <span class="hinweis">${zeile.feuer} Feuer, Abstand ≥ ${zeile.abstand}</span></h3><div class="hinweis">Strandfelder 1–42 rundum (42 → 1 = 1 Feld) · ${s.modus === 'koop' ? 'alle Feuer gehören der Gruppe' : s.modus === 'team' ? 'nur Feuer des eigenen Teams' : 'nur eigene Feuer'} · gebaute Feuer bleiben stehen</div>${teile.join('')}</section>`;
   }
 
+  // Gruppe wie V10: je Figur Charakter mit Fähigkeit, Herzen, Energie, Spezialkarten, Rohstoffe, Ausrüstung.
   gruppeHtml(sv) {
     const s = this.sl.s;
     const zeilen = sv.spieler.map((p, i) => {
-      const status = p.ausgeschieden ? ' <span class="status aus">✖</span>' : p.liegt ? ' <span class="status liegt">🩹</span>' : '';
       const char = p.charakter ? s.cfg.charaktere[p.charakter] : null;
-      return `<li class="gruppe-zeile${i === entscheider(s) && !s.ende ? ' am-zug-zeile' : ''}" data-zeige="${i}" title="Panel auf dem Tisch zeigen" style="--farbe:${spielerFarbe[i]}"><span class="punkt" style="background:${spielerFarbe[i]}"></span><b>${esc(p.name)}</b> ${this.sitze[i].ki ? '🤖' : '🧑'}${teamIndex(s, i) !== null ? ` ${TEAM_SYMBOL[teamIndex(s, i)]}` : ''}${status}<span class="gruppe-werte">${char ? `${esc(char.symbol)} ` : ''}❤️${p.herzen} ⚡${p.energie}${p.hatRoute ?? p.route ? ' 🧭' : ''}</span></li>`;
+      const status = p.ausgeschieden ? ' <span class="status aus">✖ ausgeschieden</span>' : p.liegt ? ' <span class="status liegt">🩹 am Boden</span>' : '';
+      const team = teamIndex(s, i);
+      const karten = p.karten ? p.karten.length : p.anzahlKarten ?? 0;
+      const roh = p.hand ? `<div class="gruppe-rohstoffe">${ROHSTOFFE.map((r) => `<span class="${p.hand[r] ? '' : 'null'}" title="${ROHSTOFF[r]}">${ROHSTOFF_SYMBOL[r]} ${p.hand[r]}</span>`).join('')}</div>` : `<div class="hinweis">🂠 ${p.anzahlRohstoffe ?? 0} Rohstoffe verdeckt</div>`;
+      const werkzeug = [p.ausruestung.axt && 'Steinaxt', p.ausruestung.hacke && 'Spitzhacke', p.ausruestung.waffe && rezeptName(p.ausruestung.waffe)].filter(Boolean);
+      return `<li class="gruppe-eintrag${i === entscheider(s) && !s.ende ? ' am-zug-zeile' : ''}" data-zeige="${i}" title="Panel auf dem Tisch zeigen" style="--farbe:${spielerFarbe[i]}">
+        <div class="gruppe-kopf"><span class="punkt" style="background:${spielerFarbe[i]}"></span><b>${esc(p.name)}</b> ${this.sitze[i].ki ? '🤖' : '🧑'}${team !== null ? ` ${TEAM_SYMBOL[team]}` : ''}${status}</div>
+        <div class="gruppe-charakter">${char ? `<span>${esc(char.symbol)} <b>${esc(char.name)}</b></span><span class="hinweis">${esc(charakterText(s.cfg, p.charakter))}</span>` : '<span class="hinweis">Charakter verdeckt</span>'}</div>
+        <div class="gruppe-werte">❤️ ${p.herzen}/${herzenMax(s, s.spieler[i])} · ⚡ ${p.energie}/${s.cfg.figur.energie} · 🂠 ${karten} Spezialkarte${karten === 1 ? '' : 'n'}${p.hatRoute ?? p.route ? ' · 🧭 Routenkarte' : ''}</div>
+        ${roh}<div class="hinweis">${werkzeug.length ? `🛠 ${werkzeug.join(', ')}` : 'keine Ausrüstung'}</div></li>`;
     }).join('');
-    return `<section class="gruppen-leiste"><h3>👥 ${s.modus === 'koop' ? 'Gruppe' : 'Spieler'} <span class="hinweis">${esc(MODUS_NAME[s.modus])}</span></h3><ul class="gruppe-liste">${zeilen}</ul></section>`;
+    const offen = s.modus === 'koop' ? 'alles offen' : s.modus === 'team' ? 'Teampartner offen' : 'verdeckt';
+    return `<section class="gruppen-leiste"><h3>🤝 ${s.modus === 'koop' ? 'Gruppe' : 'Spieler'} <span class="hinweis">${offen}</span></h3><ul class="gruppe-liste">${zeilen}</ul></section>`;
   }
 
   renderProtokoll() {
@@ -547,7 +582,7 @@ class Partie {
   }
 
   panelZeigen(i) {
-    const [x, y] = PANEL_ORT[i] ?? [460, -420];
+    const [x, y] = PANEL_ORT[i] ?? [520, -470];
     const f = this.flaeche();
     if (this.kamera.z < 0.6) this.kamera.z = 0.6;
     this.kamera.x = f.w / 2 - (x + 160) * this.kamera.z; this.kamera.y = 90 - y * this.kamera.z;
@@ -573,10 +608,10 @@ class Partie {
     const m = B / HALB;
     const rand = SE * m;
     const figuren = s.spieler.map((p, i) => { const f = s.felder[p.feld]; if (!f || p.ausgeschieden) return ''; const c = pixel(f.coord, SE); return `<circle cx="${(c.x * m).toFixed(0)}" cy="${(c.y * m).toFixed(0)}" r="${rand.toFixed(0)}" fill="${spielerFarbe[i]}" stroke="#fff" stroke-width="10"/>`; }).join('');
-    const panels = s.spieler.map((_, i) => { const [x, y] = PANEL_ORT[i] ?? [460, -420]; return `<rect x="${x}" y="${y}" width="320" height="${this.panelZu.has(i) ? 40 : 500}" rx="12" fill="${spielerFarbe[i]}" opacity="0.35"/>`; }).join('');
+    const panels = s.spieler.map((_, i) => { const [x, y] = PANEL_ORT[i] ?? [520, -470]; return `<rect x="${x}" y="${y}" width="320" height="${this.panelZu.has(i) ? 40 : 440}" rx="12" fill="${spielerFarbe[i]}" opacity="0.35"/>`; }).join('');
     el.innerHTML = `<svg viewBox="${WELT.x} ${WELT.y} ${WELT.w} ${WELT.h}" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <rect x="${WELT.x}" y="${WELT.y}" width="${WELT.w}" height="${WELT.h}" fill="#f3efe6"/>
-      <rect x="-770" y="-420" width="250" height="620" rx="10" fill="#e2dbcc"/><rect x="-770" y="250" width="270" height="370" rx="10" fill="#e2dbcc"/>
+      <rect x="-1190" y="-470" width="330" height="700" rx="12" fill="#e2dbcc"/><rect x="-1190" y="290" width="330" height="150" rx="40" fill="#e2dbcc"/>
       <image href="${bild.brett}" x="${-B}" y="${-B}" width="${2 * B}" height="${2 * B}" preserveAspectRatio="none"/>
       ${panels}${figuren}<rect class="sicht" x="0" y="0" width="0" height="0"/></svg>`;
     this.minimapSicht();

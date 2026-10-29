@@ -186,29 +186,39 @@ dialog.start-offen { position: fixed; inset: 50px 0 0; margin: auto; height: fit
 .welt { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
 .welt-inhalt { position: absolute; left: 0; top: 0; }
 .welt-inhalt > * { position: absolute; }
-.brett-platz { border-radius: 18px; box-shadow: var(--schatten-hoch); overflow: hidden; background: var(--meer); }
+.brett-platz { overflow: visible; }
+.replay .brett-platz { border-radius: 18px; box-shadow: var(--schatten-hoch); overflow: hidden; background: var(--meer); }
 .brett-platz svg { width: 100%; height: 100%; display: block; }
 .auslage-titel { font-size: 13px; font-weight: 600; color: var(--text-leise); white-space: nowrap; }
 
-/* Brett-SVG */
-svg.brett .feld .flaeche { fill: transparent; stroke: rgba(0, 0, 0, 0.18); stroke-width: 1; vector-effect: non-scaling-stroke; }
+/* Brett-SVG wie V10 */
+svg.brett .feld .flaeche { fill: transparent; stroke: none; }
+svg.brett .feld .plaettchen { pointer-events: none; }
 svg.brett .feld.ziel { cursor: pointer; }
-svg.brett .feld.ziel .flaeche { fill: rgba(255, 255, 255, 0.28); }
-svg.brett .feld.ziel:hover .flaeche { fill: rgba(255, 255, 255, 0.5); }
+svg.brett .feld.ziel:hover .flaeche { fill: rgba(255, 255, 255, 0.25); }
 svg.brett .ziel-rand { fill: none; stroke: #fff; stroke-width: 2.5; vector-effect: non-scaling-stroke; pointer-events: none; }
 svg.brett .hervor-rand { fill: #ffe67838; stroke: #ffd23f; stroke-width: 4; vector-effect: non-scaling-stroke; pointer-events: none; animation: hervor-puls 1.2s ease-in-out infinite; }
 @keyframes hervor-puls { 50% { stroke-width: 7; fill: #ffe67866; } }
-svg.brett .floss-ziel .flaeche { stroke: var(--k-route); stroke-width: 3; }
+svg.brett .feld.floss-ziel .flaeche { stroke: #ffe28a; stroke-width: 2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }
+svg.brett .feld.sammelfeld .flaeche { stroke: #f5b301; stroke-width: 3.5; vector-effect: non-scaling-stroke; }
+svg.brett .sammel-marker { font-size: 15px; text-anchor: middle; pointer-events: none; }
 svg.brett .ketten-rand { fill: none; stroke-width: 3; vector-effect: non-scaling-stroke; pointer-events: none; }
 svg.brett .ketten-rand.gueltig { stroke: #2fbf4a; }
 svg.brett .ketten-rand.ungueltig { stroke: #e0352b; stroke-dasharray: 5 3; }
+svg.brett .figur { pointer-events: none; }
 svg.brett .figur circle { stroke: #fff; stroke-width: 1.6; }
 svg.brett .figur.aktiv circle { stroke: #ffd23f; stroke-width: 2.6; }
 svg.brett .figur.liegt { opacity: 0.55; }
-svg.brett .figur text { font-size: 10px; text-anchor: middle; fill: #fff; font-weight: 700; pointer-events: none; }
-svg.brett .figur .werkzeug-zeichen { font-size: 7px; text-anchor: start; }
-svg.brett .ki-spur { stroke-width: 2.5; stroke-dasharray: 5 3; opacity: 0.85; pointer-events: none; }
-svg.brett .sammel-marker { font-size: 12px; }
+svg.brett .figur text { font-size: 10px; font-weight: 700; fill: #fff; text-anchor: middle; pointer-events: none; }
+svg.brett .werkzeug-icon rect { fill: #3b2a1a; stroke: #fff; stroke-width: 0.6; }
+svg.brett .ki-spur { pointer-events: none; }
+svg.brett .ki-spur line { stroke: var(--farbe); stroke-width: 3; stroke-dasharray: 6 4; opacity: 0.8; }
+svg.brett .ki-spur polygon { fill: var(--farbe); }
+svg.brett .ki-spur .ki-ziel { fill: none; stroke: var(--farbe); stroke-width: 2; opacity: 0.6; }
+svg.brett .feld-knopf { cursor: pointer; }
+svg.brett .feld-knopf rect { fill: #1f6fb5; stroke: #fff; stroke-width: 1.2; vector-effect: non-scaling-stroke; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)); }
+svg.brett .feld-knopf text { fill: #fff; font-size: 7.5px; font-weight: 700; text-anchor: middle; pointer-events: none; }
+svg.brett .feld-knopf:hover rect { fill: #2f8ae0; }
 svg.brett image { pointer-events: none; }
 
 /* Karten (Originalbilder) */
@@ -232,9 +242,19 @@ svg.brett image { pointer-events: none; }
 .stapel-karten [data-tageskarte], .stapel-karten [data-gross] { cursor: pointer; }
 .stapel-name { font-size: 12px; font-weight: 600; }
 .stapel-zahl { font-size: 11px; color: var(--text-leise); }
-.tier-beutel { width: 110px; height: 110px; margin-top: 20px; border-radius: 50% 50% 46% 46%; background: #b48a5a; border: 3px solid #8b6540; box-shadow: var(--schatten); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 30px; color: #fff4d8; line-height: 1.1; }
-.tier-beutel b { font-size: 16px; }
-.wuerfelschale, .vorrat-auslage { width: 270px; background: #e9e2d2; border: 1px solid var(--rand); box-shadow: inset 0 2px 8px #3c301e2e; padding: 10px 18px 12px; }
+.beutel { position: relative; margin: 16px 0 6px 4px; width: 104px; height: 120px; border-radius: 46% 46% 42% 42% / 40% 40% 56% 56%; background: #b59a6e; background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.05) 0 2px, transparent 2px 5px), repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 5px); box-shadow: var(--schatten); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; line-height: 1.2; }
+.beutel.leer { opacity: 0.4; }
+.beutel-knoten { position: absolute; top: -10px; width: 38px; height: 16px; border-radius: 8px; background: #8f7650; }
+.beutel-motiv { font-size: 30px; }
+.beutel-name { font-size: 13px; font-weight: 700; }
+.stapel.auf-brett { flex-direction: row; align-items: center; gap: 4px; padding: 4px 5px; }
+.stapel.auf-brett .stapel-karten { position: relative; width: auto; height: 100%; flex: 0 0 auto; }
+.stapel.auf-brett .karte.brett-stapel { height: 100%; width: auto; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
+.stapel.auf-brett .karte.brett-stapel.leer { opacity: 0.3; }
+.stapel.auf-brett .stapel-info { color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); min-width: 0; line-height: 1.15; }
+.stapel.auf-brett .stapel-name { font-size: 10px; font-weight: 700; }
+.stapel.auf-brett .stapel-zahl { font-size: 9px; color: #e8eef5; }
+.wuerfelschale, .vorrat-auslage { width: 330px; background: #e9e2d2; border: 1px solid var(--rand); box-shadow: inset 0 2px 8px #3c301e2e; padding: 10px 18px 12px; }
 .wuerfelschale { border-radius: 50px / 30px; }
 .vorrat-auslage { border-radius: 14px; padding: 10px 12px 12px; }
 .schale-titel { font-weight: 600; font-size: 12px; color: var(--text-leise); margin-bottom: 4px; }
@@ -287,7 +307,7 @@ svg.brett image { pointer-events: none; }
 .route-karte .karte { width: 62px; }
 .panel-aktionen { border-top: 1px solid var(--rand); padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; background: #fff; border-radius: 0 0 var(--radius-panel) var(--radius-panel); }
 .spieler-panel.ist-aktiv { z-index: 3; }
-.spieler-panel.ist-aktiv .panel-inhalt { max-height: 340px; }
+.spieler-panel.ist-aktiv .panel-inhalt { max-height: 250px; }
 .knopf-reihe { display: flex; flex-wrap: wrap; gap: 4px; }
 .knopf-reihe button { font-size: 12px; padding: 3px 8px; }
 .knopf-reihe button.haupt { font-size: 13px; }
@@ -321,8 +341,8 @@ svg.brett image { pointer-events: none; }
 .floss-tableau, .gruppen-leiste, .ketten-leiste { background: #fff; border: 1px solid var(--rand); border-radius: var(--radius-panel); padding: 8px; }
 .floss-teil { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
 .floss-tabelle { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
-.floss-tabelle th { font-size: 14px; font-weight: 600; color: var(--text-leise); text-align: right; padding: 1px 4px; }
-.floss-tabelle td { padding: 2px 4px; border-top: 1px solid var(--rand); text-align: right; }
+.floss-tabelle th { font-size: 14px; font-weight: 600; color: var(--text-leise); text-align: right; padding: 1px 2px; }
+.floss-tabelle td { padding: 2px 2px; border-top: 1px solid var(--rand); text-align: right; }
 .floss-tabelle td:first-child { text-align: left; white-space: nowrap; }
 .floss-tabelle tr.ok td { background: #eef3e8; color: inherit; }
 .floss-tabelle tr.ok .haken { color: var(--k-gluecksfund); }
@@ -346,10 +366,17 @@ svg.brett image { pointer-events: none; }
 .feuer-nr.gueltig { background: #2fbf4a; }
 .feuer-nr.verletzt { background: #e0352b; }
 .gruppe-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
-.gruppe-zeile { display: flex; align-items: center; gap: 2px; padding: 3px 6px; border-left: 4px solid var(--farbe); border-radius: 4px; background: var(--flaeche); cursor: pointer; }
-.gruppe-zeile:hover { background: #f1ebdf; }
-.gruppe-zeile.am-zug-zeile { box-shadow: inset 0 0 0 2px #ffd23f; }
-.gruppe-werte { margin-left: auto; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gruppe-eintrag { padding: 6px 8px; border-left: 4px solid var(--farbe); border-radius: 4px; background: var(--flaeche); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.gruppe-eintrag:hover { background: #f1ebdf; }
+.gruppe-eintrag.am-zug-zeile { box-shadow: inset 0 0 0 2px #ffd23f; }
+.gruppe-werte { font-variant-numeric: tabular-nums; }
+.gruppe-rohstoffe { display: flex; flex-wrap: wrap; gap: 2px 8px; font-variant-numeric: tabular-nums; }
+.gruppe-rohstoffe .null { opacity: 0.4; }
+.fehlt-zeile { margin-top: 2px; }
+.erfuellt { color: #3f6a35; font-weight: 600; }
+.haken.ok { color: var(--k-gluecksfund); }
+.floss-teil.klein { font-size: 14px; }
+h3.abstand-oben { margin-top: 12px; }
 
 /* Protokoll-Box */
 .log-box { position: absolute; right: calc(var(--leiste) + 12px); bottom: 12px; width: min(420px, 45vw); z-index: 5; background: #fbf8f1f7; border: 1px solid var(--rand); border-radius: var(--radius-panel); box-shadow: var(--schatten-hoch); font-size: 14px; }
@@ -437,6 +464,33 @@ table.tabelle { border-collapse: collapse; width: 100%; font-size: 14px; }
 button.warnung { border-color: var(--k-gefahr); color: var(--k-gefahr); }
 .aus { opacity: 0.5; }
 .charakter-bild { width: 100%; max-width: 230px; border-radius: 6px; display: block; margin: 4px 0; box-shadow: var(--schatten); }
+
+/* ---------- Regeln wie V10 (Textspalte zentriert, höchstens 900 px) ---------- */
+.regeln { max-width: 900px; margin: 0 auto; padding: 4px 4px 40px; line-height: 1.55; font-size: 15px; }
+.regeln h1 { font-size: 24px; margin: 0 0 8px; }
+.regeln h1 .hinweis { font-weight: 400; }
+.regeln-werkzeug { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.gruppe-charakter { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; }
+.regeln section { background: var(--flaeche); border: 1px solid var(--rand); border-radius: var(--radius-panel); padding: 10px 16px; margin-top: 12px; }
+.regeln h2 { font-size: 18px; margin: 4px 0 8px; }
+.regeln h3 { font-size: 16px; margin: 14px 0 6px; }
+.regeln ul, .regeln ol { padding-left: 22px; margin: 6px 0; }
+.regeln li { margin: 3px 0; }
+.regeln table { border-collapse: collapse; width: 100%; font-size: 14px; margin: 6px 0; }
+.regeln th, .regeln td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--rand); vertical-align: top; }
+.regeln th { background: #f3ece0; }
+.regeln tr.aus td { opacity: 0.5; }
+.abweichung { background: #f3e1b5; border-bottom: 2px solid var(--warn); border-radius: 3px; padding: 0 3px; cursor: help; }
+.plaettchen-bild { width: 34px; vertical-align: middle; margin-right: 4px; }
+.karten-tabelle td.karten-zelle { width: 92px; }
+.karten-zelle .karte, .karten-zelle .karte-text { width: 80px; }
+.karten-zelle .karte-text { min-height: 112px; font-size: 10px; }
+.charakter-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-top: 8px; }
+.charakter-figur { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.charakter-figur img { width: 100%; border-radius: 8px; box-shadow: var(--schatten); }
+.token-reihe { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.token-reihe figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 70px; font-size: 14px; }
+.token-reihe img { width: 48px; height: 48px; image-rendering: pixelated; border-radius: 50%; }
 
 /* Replay */
 .replay { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 12px; height: calc(100vh - 190px); min-height: 420px; }
