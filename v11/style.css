@@ -97,22 +97,46 @@ body:not(.tisch-sichtbar) .hinweisleiste { display: none; }
 .kasten > h2:first-child { margin-top: 2px; }
 .raster2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; }
 .leer-tisch { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.leer-tisch .kasten { max-width: 460px; }
 .gesperrt { background: #f6e2c9; border: 1px solid #e2bf8f; padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-/* ---------- Setup ---------- */
-.setup { max-width: 1020px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 12px; align-items: start; }
-.setup > .gesperrt { grid-column: 1 / -1; margin: 0; }
-.formular-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; margin-bottom: 10px; }
-.formular-raster label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--text-leise); }
-.formular-raster select, .formular-raster input { width: 100%; }
-.wahl { display: flex; gap: 8px; align-items: baseline; padding: 5px 8px; border-radius: 6px; cursor: pointer; }
+/* ---------- Startdialog «Neue Partie» (wie V10) ---------- */
+.start-dialog { width: min(720px, 94vw); padding: 0 20px 18px; line-height: 1.4; }
+.start-dialog > h2:first-child { margin: 0 -20px 14px; padding: 14px 20px; font-size: 20px; }
+.start-dialog fieldset { margin: 0 0 14px; padding: 8px 14px 12px; border-radius: 10px; background: #fff; }
+.start-dialog legend { font-size: 15px; }
+.wahl { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.wahl input { margin: 3px 0 0; width: 16px; height: 16px; }
 .wahl:hover { background: #f6f2e8; }
-.start-zeile { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.sitz { display: grid; grid-template-columns: 18px 1.2fr 1fr 1fr auto; gap: 6px; align-items: center; margin: 4px 0; }
-.persoenlichkeit { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 4px 12px; padding: 4px 0 8px 24px; }
-.persoenlichkeit label { display: flex; justify-content: space-between; gap: 6px; font-size: 12px; }
-.persoenlichkeit input[type="range"] { width: 90px; }
+.wahl .hinweis { font-size: 13px; }
+.sitze { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.sitz { display: grid; grid-template-columns: 14px minmax(140px, 1.3fr) minmax(120px, 1fr) minmax(150px, 1fr) auto; gap: 8px; align-items: center; }
+.sitz input, .sitz select { width: 100%; min-width: 0; }
+.sitz .team-marke { white-space: nowrap; }
+.formular-zeile { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; align-items: center; margin: 0 0 12px; }
+.formular-zeile > label { font-weight: 600; }
+.formular-zeile > span { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.formular-zeile input:not([type="checkbox"]), .formular-zeile select { min-width: 200px; }
+details.erweitert { border: 1px solid var(--rand); border-radius: 10px; background: #fff; padding: 6px 14px; margin-bottom: 12px; }
+details.erweitert[open] { padding-bottom: 12px; }
+details.erweitert > summary { font-size: 15px; padding: 6px 0; }
+details.erweitert > summary .hinweis { font-weight: 400; margin-left: 6px; }
+details.erweitert .formular-zeile { margin-top: 8px; }
+.pers-block { border: 1px solid var(--rand); border-radius: 8px; padding: 4px 12px; margin: 8px 0; background: var(--flaeche); }
+.pers-block[open] { padding-bottom: 10px; }
+.pers-block > summary { font-weight: 600; padding: 4px 0; }
+.pers-raster { display: grid; grid-template-columns: 220px minmax(0, 1fr) 44px; gap: 8px 12px; align-items: center; margin: 6px 0 10px; }
+.pers-raster input[type="range"] { width: 100%; }
+.pers-raster output { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.pers-raster select, .pers-raster input[type="number"] { width: 220px; }
+.start-pruefung { border: 1px solid #e2bf8f; background: #fdf3e4; border-radius: 10px; padding: 8px 14px; margin-bottom: 12px; }
+.start-dialog .dialog-knoepfe { position: sticky; bottom: -18px; background: var(--flaeche); margin: 0 -20px -18px; padding: 12px 20px 18px; border-top: 1px solid var(--rand); }
+.tisch.leer { cursor: default; }
+dialog.start-offen { position: fixed; inset: 50px 0 0; margin: auto; height: fit-content; z-index: 40; max-height: calc(100vh - 70px); }
+.start-dialog { max-height: calc(100vh - 72px); }
+.start-sichtbar .spiel-ansicht::after { content: ""; position: absolute; inset: 0; background: #2b2b2b59; z-index: 30; }
+.start-sichtbar .hinweisleiste { opacity: 0.6; }
+.leer-tisch { flex-direction: column; gap: 18px; }
+.vorschau-brett { max-height: calc(100% - 90px); max-width: 80%; border-radius: 18px; box-shadow: var(--schatten-hoch); opacity: 0.9; }
 .pruefung { font-size: 13px; }
 .pruefung p { margin: 2px 0; }
 .pruefung ul { margin: 2px 0; padding-left: 20px; }
@@ -345,7 +369,7 @@ svg.brett image { pointer-events: none; }
 .buehne-fuss button { min-width: 90px; }
 
 /* Dialoge */
-dialog { border: 1px solid var(--rand); border-radius: 10px; padding: 0; background: var(--flaeche); color: var(--text); box-shadow: var(--schatten-hoch); max-width: min(760px, 94vw); max-height: 92vh; }
+dialog { border: 1px solid var(--rand); border-radius: 12px; padding: 0; background: var(--flaeche); color: var(--text); box-shadow: var(--schatten-hoch); max-width: min(1100px, 96vw); max-height: 94vh; }
 dialog::backdrop { background: #2b2b2b59; }
 .dialog-rahmen { padding: 0 14px 14px; min-width: min(420px, 90vw); max-height: 90vh; overflow: auto; }
 .dialog-rahmen.breit { width: min(1000px, 94vw); }
@@ -378,7 +402,7 @@ table.tabelle { border-collapse: collapse; width: 100%; font-size: 13px; }
 
 @media (max-width: 900px) {
   :root { --leiste: 260px; }
-  .setup, .regler-spalten { grid-template-columns: 1fr; }
+  .regler-spalten { grid-template-columns: 1fr; }
   .bereich-liste { flex-direction: row; flex-wrap: wrap; border-right: 0; max-height: 120px; }
   .regler { grid-template-columns: 1fr auto; }
   .regler-hinweis { grid-column: 1 / -1; }

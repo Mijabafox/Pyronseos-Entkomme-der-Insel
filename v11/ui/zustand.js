@@ -61,11 +61,11 @@ export function presetLaden(teil, name) {
 // Spielerzahl der aktuellen Konfiguration (Team ist immer 2 gegen 2).
 export function spielerZahl(cfg = app.cfg) { return cfg.match.modus === 'team' ? 2 * cfg.match.teamGroesse : cfg.match.spieler; }
 
-// Prüfergebnis der aktuellen Konfiguration (Setup und Regler zeigen dasselbe).
+// Prüfergebnis der aktuellen Konfiguration (Startdialog und Regler zeigen dasselbe).
 export function pruefen(cfg = app.cfg) { return validieren(cfg, { modus: cfg.match.modus, spieler: spielerZahl(cfg) }); }
 
 // Anzahl der Werte, die vom Standard V10 abweichen (ohne Name des Presets).
 export function geaendertZahl(cfg = app.cfg) { return unterschiede(app.standard, cfg).filter((u) => !u.pfad.startsWith('meta')).length; }
 
-// Laufende Partie beenden, damit Setup und Regler wieder offen sind.
+// Laufende Partie beenden, damit die Regler wieder offen sind.
 export function partieBeenden() { app.partie?.beenden(); app.partie = null; app.melden('partie'); }

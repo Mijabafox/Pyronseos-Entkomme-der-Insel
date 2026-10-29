@@ -40,9 +40,9 @@ export function neuesSpiel() {
 
 export function spielZeigen(el) {
   if (!app.partie) {
-    el.innerHTML = `<div class="leer-tisch"><div class="kasten"><h2>Keine Partie</h2><p>Stelle im Reiter «Setup» Modus, Spieler und Sitze ein und starte dann die Partie. Die Werte änderst du im Reiter «Regler».</p><button type="button" class="haupt" id="zumSetup">Zum Setup</button></div></div>`;
-    $('#zumSetup', el).addEventListener('click', () => app.reiter('setup'));
-    $('#hinweisleiste').innerHTML = '<span class="was-jetzt">Noch keine Partie – im Setup starten.</span>';
+    el.innerHTML = `<div class="tisch leer"><div class="leer-tisch"><img class="vorschau-brett" src="${bild.brett}" alt="" draggable="false"/><button type="button" class="haupt gross" id="zumStart">＋ Neue Partie</button></div></div>`;
+    $('#zumStart', el).addEventListener('click', () => app.neuePartieDialog());
+    $('#hinweisleiste').innerHTML = '<span class="was-jetzt">Noch keine Partie – im Dialog «Neue Partie» Modus und Spieler wählen und auf «Partie starten» klicken.</span>';
     return;
   }
   app.partie.einhaengen(el);
@@ -638,7 +638,7 @@ class Partie {
     $('#dZu', d).addEventListener('click', dialogZu);
     $('#dExport', d).addEventListener('click', () => this.exportieren());
     $('#dReplay', d).addEventListener('click', () => { dialogZu(); app.replayProtokoll = { ...this.sl.protokoll(), konfig: this.cfg }; app.reiter('replay'); });
-    $('#dNeu', d).addEventListener('click', () => { dialogZu(); app.partie = null; app.reiter('setup'); });
+    $('#dNeu', d).addEventListener('click', () => { dialogZu(); app.neuePartieDialog(); });
   }
 }
 
