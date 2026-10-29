@@ -2,13 +2,14 @@
 import { $, $$ } from './dom.js';
 import { app, startZustand } from './zustand.js';
 import { setupZeigen } from './setup.js';
+import { reglerZeigen } from './regler.js';
 import { spielZeigen } from './spiel.js';
 import { kartenZeigen } from './editor.js';
 import { simZeigen } from './simtab.js';
 import { replayZeigen } from './replay.js';
 import { regelnZeigen } from './regeln.js';
 
-const ansichten = { setup: setupZeigen, spiel: spielZeigen, karten: kartenZeigen, sim: simZeigen, replay: replayZeigen, regeln: regelnZeigen };
+const ansichten = { spiel: spielZeigen, setup: setupZeigen, regler: reglerZeigen, karten: kartenZeigen, sim: simZeigen, replay: replayZeigen, regeln: regelnZeigen };
 let aktuell = 'setup';
 
 export function reiter(name) {

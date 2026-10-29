@@ -1,5 +1,6 @@
 // Gemeinsamer Zustand der Oberfläche: aktuelle Konfiguration, Sitze, laufende Partie, Presets.
 import { standardLaden, zusammenfuehren, klon, unterschiede, setzen } from '../engine/config.js';
+import { validieren } from '../engine/validator.js';
 import { speicher } from './dom.js';
 
 export const EINGEBAUT = ['standard', 'einfach', 'hart'];
@@ -53,3 +54,15 @@ export function presetLaden(teil, name) {
   app.speichern();
   app.melden('konfig');
 }
+
+// Spielerzahl der aktuellen Konfiguration (Team ist immer 2 gegen 2).
+export function spielerZahl(cfg = app.cfg) { return cfg.match.modus === 'team' ? 2 * cfg.match.teamGroesse : cfg.match.spieler; }
+
+// Prüfergebnis der aktuellen Konfiguration (Setup und Regler zeigen dasselbe).
+export function pruefen(cfg = app.cfg) { return validieren(cfg, { modus: cfg.match.modus, spieler: spielerZahl(cfg) }); }
+
+// Anzahl der Werte, die vom Standard V10 abweichen (ohne Name des Presets).
+export function geaendertZahl(cfg = app.cfg) { return unterschiede(app.standard, cfg).filter((u) => !u.pfad.startsWith('meta')).length; }
+
+// Laufende Partie beenden, damit Setup und Regler wieder offen sind.
+export function partieBeenden() { app.partie?.beenden(); app.partie = null; app.melden('partie'); }

@@ -69,6 +69,48 @@ legend { font-weight: 600; padding: 0 4px; }
 .persoenlichkeit input[type="range"] { width: 90px; }
 .gesperrt { background: #f6e2c9; border: 1px solid #e2bf8f; padding: 6px 10px; border-radius: 6px; margin-bottom: 10px; }
 
+/* Reiter Regler: Kopf fix, links Bereiche, rechts Regler (scrollt allein) */
+#ansicht-regler { padding: 0; overflow: hidden; }
+.regler-ansicht { display: flex; flex-direction: column; height: 100%; }
+.regler-ansicht > .gesperrt { margin: 8px 12px 0; }
+.regler-kopf { padding: 8px 12px; background: var(--flaeche); border-bottom: 1px solid var(--rand); box-shadow: var(--schatten); z-index: 1; }
+.regler-kopf #reglerSuche { width: 260px; }
+.regler-kopf .trenner { width: 1px; align-self: stretch; background: var(--rand); margin: 0 2px; }
+.regler-kopf .zaehler { margin-left: auto; font-size: 12.5px; color: var(--leise); }
+.regler-kopf .zaehler b { color: var(--warn); }
+.pruefung { margin-top: 6px; max-height: 22vh; overflow: auto; font-size: 13px; }
+.pruefung p { margin: 2px 0; }
+.pruefung ul { margin: 2px 0; padding-left: 20px; }
+.pruefung a.ziel { color: inherit; text-decoration: underline dotted; }
+.pruefung a.ziel:hover { text-decoration: underline; }
+.pruefung .warnungen summary { font-weight: 600; color: var(--warn); font-size: 13px; }
+.regler-spalten { flex: 1; min-height: 0; display: grid; grid-template-columns: 210px minmax(0, 1fr); }
+.bereich-liste { overflow: auto; padding: 8px; border-right: 1px solid var(--rand); display: flex; flex-direction: column; gap: 2px; }
+.bereich-liste button { display: flex; justify-content: space-between; align-items: center; text-align: left; border-color: transparent; background: transparent; }
+.bereich-liste button.an { background: var(--primaer); color: #fff; }
+.bereich-liste .anzahl { font-size: 11px; opacity: 0.75; }
+.bereich-liste .geaendert-zahl { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--warn); color: #fff; text-align: center; }
+.regler-liste { overflow: auto; padding: 4px 16px 24px; }
+.regler-liste h2 .hinweis { font-weight: 400; }
+.regler-liste .gruppe-titel.gross { font-size: 14px; margin-top: 14px; color: var(--text); border-bottom: 1px solid var(--rand); }
+.regler-liste .regler { display: grid; grid-template-columns: minmax(180px, 1.4fr) minmax(90px, auto) minmax(120px, 1fr) auto; gap: 10px; padding: 4px 6px; border-left: 3px solid transparent; }
+.regler-liste .regler:nth-child(even) { background: rgba(255, 255, 255, 0.45); }
+.regler-liste .regler.geaendert { background: #f3e6c4; border-left-color: var(--warn); }
+.regler-liste .regler.geaendert .regler-name::after { content: " ● geändert"; color: var(--warn); font-size: 11px; font-weight: 600; }
+.regler-liste .regler.blinkt { animation: blinken 1.6s ease-out 1; }
+@keyframes blinken { 0%, 40% { box-shadow: 0 0 0 3px var(--primaer); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.regler-hinweis { color: var(--leise); font-size: 11.5px; }
+.regler-liste .std:disabled { visibility: hidden; }
+.setup { max-width: 980px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 12px; align-items: start; }
+.setup > .gesperrt { grid-column: 1 / -1; margin: 0; }
+.formular-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 12px; margin-bottom: 10px; }
+.formular-raster label { display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--leise); }
+.formular-raster select, .formular-raster input { width: 100%; }
+.wahl { display: flex; gap: 6px; align-items: baseline; padding: 3px 0; }
+.start-zeile { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+button.gross { font-size: 16px; padding: 8px 16px; }
+@media (max-width: 800px) { .setup, .regler-spalten { grid-template-columns: 1fr; } .bereich-liste { flex-direction: row; flex-wrap: wrap; border-right: 0; max-height: 120px; } .regler-liste .regler { grid-template-columns: 1fr auto; } }
+
 /* Spieltisch */
 .tisch { display: grid; grid-template-columns: minmax(0, 1fr) 370px; grid-template-rows: auto minmax(0, 1fr) 170px; height: 100%; }
 .leiste { grid-column: 1 / -1; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 6px 10px; background: var(--flaeche); border-bottom: 1px solid var(--rand); }
