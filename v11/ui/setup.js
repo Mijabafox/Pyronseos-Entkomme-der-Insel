@@ -77,7 +77,7 @@ function sitzHtml(s, k) {
     </div></div>`;
 }
 
-function neu() { app.speichern(); setupZeigen($('#ansicht-setup')); }
+function neu() { app.speichern(); setupZeigen($('#ansicht-setup')); app.toolbar(); }
 
 function verdrahten(el, gesperrt) {
   $('#partieEnde', el)?.addEventListener('click', () => { partieBeenden(); neu(); });

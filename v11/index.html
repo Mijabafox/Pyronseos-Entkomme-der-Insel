@@ -10,27 +10,33 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <header class="kopf">
-      <div class="logo">🏝️ <b>Insel-Survival</b> <span class="hinweis">Version 11</span></div>
-      <nav class="reiter" aria-label="Bereiche">
-        <button type="button" data-reiter="spiel">🎲 Spiel</button>
-        <button type="button" data-reiter="setup" class="an">⚙️ Setup</button>
-        <button type="button" data-reiter="regler">🎚️ Regler</button>
-        <button type="button" data-reiter="karten">🃏 Karten</button>
-        <button type="button" data-reiter="sim">📊 Simulation</button>
-        <button type="button" data-reiter="replay">⏯ Replay</button>
-        <button type="button" data-reiter="regeln">📖 Regeln</button>
-      </nav>
+    <header id="toolbar" class="toolbar">
+      <div class="tb-gruppe tb-titel">
+        <span class="tb-logo" title="Insel-Survival · Version 11 – Regelstand V10, Regler-Labor und menschennahe KI">🏝️<span class="tb-text"> Insel-Survival · Version 11</span></span>
+        <span class="tb-modus" id="tbModus">Koop</span>
+        <nav class="tb-reiter" aria-label="Bereiche">
+          <button type="button" class="reiter-knopf" data-reiter="spiel" title="Spiel"><span class="tb-symbol">🎲</span><span class="tb-text">Spiel</span></button>
+          <button type="button" class="reiter-knopf an" data-reiter="setup" title="Setup"><span class="tb-symbol">⚙️</span><span class="tb-text">Setup</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="regler" title="Regler"><span class="tb-symbol">🎚️</span><span class="tb-text">Regler</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="karten" title="Karten"><span class="tb-symbol">🃏</span><span class="tb-text">Karten</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="sim" title="Simulation"><span class="tb-symbol">📊</span><span class="tb-text">Simulation</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="replay" title="Replay"><span class="tb-symbol">⏯</span><span class="tb-text">Replay</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="regeln" title="Regeln"><span class="tb-symbol">📖</span><span class="tb-text">Regeln</span></button>
+        </nav>
+      </div>
+      <div class="tb-gruppe tb-tag" id="tbTag" hidden></div>
+      <div class="tb-gruppe tb-tempo" id="tbTempo"></div>
+      <div class="tb-gruppe tb-knoepfe" id="tbKnoepfe"></div>
+      <div class="tb-gruppe tb-rechts" id="tbRechts"></div>
     </header>
-    <main>
-      <section id="ansicht-spiel" class="ansicht" hidden></section>
-      <section id="ansicht-setup" class="ansicht"></section>
-      <section id="ansicht-regler" class="ansicht" hidden></section>
-      <section id="ansicht-karten" class="ansicht" hidden></section>
-      <section id="ansicht-sim" class="ansicht" hidden></section>
-      <section id="ansicht-replay" class="ansicht" hidden></section>
-      <section id="ansicht-regeln" class="ansicht" hidden></section>
-    </main>
+    <div id="hinweisleiste" class="hinweisleiste" hidden></div>
+    <main id="ansicht-spiel" class="spiel-ansicht" hidden></main>
+    <main id="ansicht-setup" class="text-ansicht"></main>
+    <main id="ansicht-regler" class="text-ansicht voll" hidden></main>
+    <main id="ansicht-karten" class="text-ansicht" hidden></main>
+    <main id="ansicht-sim" class="text-ansicht" hidden></main>
+    <main id="ansicht-replay" class="text-ansicht" hidden></main>
+    <main id="ansicht-regeln" class="text-ansicht" hidden></main>
     <dialog id="dialog"></dialog>
     <div id="buehne" class="buehne" hidden></div>
     <script type="module" src="./ui/app.js"></script>

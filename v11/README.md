@@ -10,12 +10,12 @@ Prototyp mit Regelstand V10, Regler-Labor und menschennaher KI. Eine Regel-Engin
    ```
    Startet einen lokalen Server im aktuellen Ordner.
 2. `http://localhost:8011/v11/` öffnen (auf GitHub Pages: `…/v11/`).
-3. Im Reiter **Setup** Modus, Spielerzahl, Sitze (Mensch oder KI mit Stufe und Persönlichkeit), Seed, Preset und alle Regler einstellen. Der Validator zeigt Fehler (blockieren den Start) und Warnungen.
-4. **Partie starten**. Während der Partie sind die Regler gesperrt.
+3. Im Reiter **Setup** Preset, Modus, Spielerzahl, Seed und Sitze (Mensch oder KI mit Stufe und Persönlichkeit) wählen. Einzelne Werte stellst du im Reiter **Regler** ein. Das Prüfergebnis zeigt Fehler (sie blockieren den Start) und Warnungen.
+4. **Partie starten**. Die Ansicht springt zu «Spiel». Während der Partie sind Setup und Regler gesperrt.
 
-Reiter: **Setup** (alle Regler, Presets laden und speichern, Datei-Export und -Import), **Spiel** (Koop, Team, PvP), **Karten** (Karteneditor), **Simulation** (Serie, Sweep, A/B, Abgleich mit echten Partien), **Replay**, **Regeln** (Übersicht aus der aktuellen Konfiguration).
+Reiter: **Spiel** (Koop, Team, PvP; Tisch mit Zoom, Verschieben und Minimap wie V10), **Setup** (Start-Angaben), **Regler** (alle Werte nach Bereichen, Suche, Presets, Export und Import, Einzel-Reset), **Karten** (Karteneditor), **Simulation** (Serie, Sweep, A/B, Abgleich mit echten Partien), **Replay**, **Regeln** (Übersicht aus der aktuellen Konfiguration).
 
-KI-Tempo im Spiel: schnell, normal, langsam, «sehr langsam – Auto» (Pause 1 bis 5 s pro Schritt) und «sehr langsam – Weiter-Knopf» (Enter oder Leertaste). Jederzeit umschaltbar. **⬇ Protokoll** speichert die Partie für Replay und Abgleich.
+KI-Tempo (Toolbar oben): schnell, normal, langsam, «sehr langsam – Auto» (Pause 1 bis 5 s pro Schritt) und «sehr langsam – Weiter-Knopf» (Enter oder Leertaste). Jederzeit umschaltbar. **⬇ Protokoll** speichert die Partie für Replay und Abgleich.
 
 ## Simulation über die Kommandozeile
 

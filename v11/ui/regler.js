@@ -225,6 +225,7 @@ function geaendert(el, z, r, zurueck = false) {
   $('.std', ersatz).addEventListener('click', () => { setzen(app.cfg, r.pfad, structuredClone(lesen(app.standard, r.pfad) ?? null)); geaendert(el, ersatz, r, true); });
   if (zurueck) i.focus();
   kopfAktualisieren(el);
+  app.toolbar();
 }
 
 function verdrahten(el, gesperrt) {
@@ -233,7 +234,7 @@ function verdrahten(el, gesperrt) {
   const suche = $('#reglerSuche', el);
   suche.addEventListener('input', () => { ansicht.suche = suche.value; kopfAktualisieren(el); listeZeichnen(el); });
   if (gesperrt) return;
-  const neu = () => reglerZeigen(el);
+  const neu = () => { reglerZeigen(el); app.toolbar(); };
   $('#presetLaden', el).addEventListener('click', () => {
     const k = $('#presetWahl', el).value;
     const [art, name] = [k.slice(0, 1), k.slice(2)];
