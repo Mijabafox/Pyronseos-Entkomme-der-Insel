@@ -35,7 +35,7 @@ function kreis(href, x, y, r, klasse, titel) {
   return `<image class="${klasse}" href="${href}" x="${(x - r).toFixed(2)}" y="${(y - r).toFixed(2)}" width="${2 * r}" height="${2 * r}"><title>${esc(titel)}</title></image>`;
 }
 
-// opt: { ziele:Set, kette:{gueltig:Set, ungueltig:Set}, hervor, spur:[{von,nach,spieler}], zielStrand:Set, sammelfeld, trinken }
+// opt: { ziele:Set, kette:{gueltig:Set, ungueltig:Set}, hervor, spur:[{von,nach,spieler}], zielStrand:Set, sammelfeld, trinken, figurenZiehbar, figurGewaehlt }
 export function brettSvg(s, opt = {}) {
   const teile = [];
   teile.push(`<image class="brett-bild" href="${bild.brett}" x="${BRETT.x.toFixed(2)}" y="${BRETT.y.toFixed(2)}" width="${BRETT.w.toFixed(2)}" height="${BRETT.h.toFixed(2)}" preserveAspectRatio="none"/>`);
@@ -96,7 +96,8 @@ export function brettSvg(s, opt = {}) {
     const werkzeuge = [p.ausruestung.axt && ['axt', 'Steinaxt'], p.ausruestung.hacke && ['hacke', 'Spitzhacke'], p.ausruestung.waffe && [p.ausruestung.waffe, p.ausruestung.waffe === 'holzspeer' ? 'Holzspeer' : 'Steinmachete']].filter(Boolean);
     const gr = r < 10 ? 10 : 13;
     const symbole = werkzeuge.map(([id, name], m) => werkzeugSymbol(id, name, x + r + gr / 2 + 1, y - r + 3 + m * (gr * 0.78 + 1), gr)).join('');
-    teile.push(`<g class="figur${i === s.aktiv && !s.ende ? ' aktiv' : ''}${p.liegt ? ' liegt' : ''}"><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${spielerFarbe[i]}"/><text x="${x.toFixed(1)}" y="${(y + 3.5).toFixed(1)}"${r < 10 ? ' style="font-size:8px"' : ''}>${esc(kuerzel)}</text>${symbole}<title>${esc(p.name)}${p.liegt ? ' (am Boden)' : ''}${werkzeuge.length ? ` · ${werkzeuge.map((x) => x[1]).join(', ')}` : ''}</title></g>`);
+    const ziehbar = opt.figurenZiehbar ? ` ziehbar${opt.figurGewaehlt === i ? ' gewaehlt' : ''}` : '';
+    teile.push(`<g class="figur${i === s.aktiv && !s.ende ? ' aktiv' : ''}${p.liegt ? ' liegt' : ''}${ziehbar}"${opt.figurenZiehbar ? ` data-figur="${i}"` : ''}><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${spielerFarbe[i]}"/><text x="${x.toFixed(1)}" y="${(y + 3.5).toFixed(1)}"${r < 10 ? ' style="font-size:8px"' : ''}>${esc(kuerzel)}</text>${symbole}<title>${esc(p.name)}${p.liegt ? ' (am Boden)' : ''}${werkzeuge.length ? ` · ${werkzeuge.map((x) => x[1]).join(', ')}` : ''}</title></g>`);
   });
   // Trinken-Knopf direkt auf dem Feld (wie V10)
   if (opt.trinken && s.felder[opt.trinken]) {

@@ -206,6 +206,9 @@ svg.brett .ketten-rand { fill: none; stroke-width: 3; vector-effect: non-scaling
 svg.brett .ketten-rand.gueltig { stroke: #2fbf4a; }
 svg.brett .ketten-rand.ungueltig { stroke: #e0352b; stroke-dasharray: 5 3; }
 svg.brett .figur { pointer-events: none; }
+svg.brett .figur.ziehbar { pointer-events: all; cursor: grab; }
+svg.brett .figur.ziehbar:hover circle { stroke-width: 3; }
+svg.brett .figur.gewaehlt circle { stroke: #2b2b2b; stroke-width: 3; stroke-dasharray: 3 2; }
 svg.brett .figur circle { stroke: #fff; stroke-width: 1.6; }
 svg.brett .figur.aktiv circle { stroke: #ffd23f; stroke-width: 2.6; }
 svg.brett .figur.liegt { opacity: 0.55; }
@@ -307,7 +310,7 @@ svg.brett image { pointer-events: none; }
 .route-karte .karte { width: 62px; }
 .panel-aktionen { border-top: 1px solid var(--rand); padding: 6px 10px 10px; display: flex; flex-direction: column; gap: 6px; background: #fff; border-radius: 0 0 var(--radius-panel) var(--radius-panel); }
 .spieler-panel.ist-aktiv { z-index: 3; }
-.spieler-panel.ist-aktiv .panel-inhalt { max-height: 250px; }
+.spieler-panel.ist-aktiv:not(.frei) .panel-inhalt { max-height: 250px; }
 .knopf-reihe { display: flex; flex-wrap: wrap; gap: 4px; }
 .knopf-reihe button { font-size: 12px; padding: 3px 8px; }
 .knopf-reihe button.haupt { font-size: 13px; }
@@ -464,6 +467,95 @@ table.tabelle { border-collapse: collapse; width: 100%; font-size: 14px; }
 button.warnung { border-color: var(--k-gefahr); color: var(--k-gefahr); }
 .aus { opacity: 0.5; }
 .charakter-bild { width: 100%; max-width: 230px; border-radius: 6px; display: block; margin: 4px 0; box-shadow: var(--schatten); }
+
+/* ---------- Freier Tisch (wie V10) ---------- */
+.tb-modus.frei { background: var(--k-bauplan); }
+.toolbar.frei-modus { flex-wrap: wrap; overflow-x: visible; }
+.werkzeug { width: 32px; padding: 3px 0; text-align: center; }
+.werkzeug.an { background: var(--primaer); color: #fff; border-color: var(--primaer); }
+.tb-tag button { padding: 2px 8px; }
+.tisch[data-werkzeug="hand"] { cursor: grab; }
+.tisch[data-werkzeug="marker"] { cursor: crosshair; }
+.tisch[data-werkzeug="nebel"] svg.brett .feld, .tisch[data-werkzeug="pinsel"] svg.brett .feld { cursor: pointer; }
+.tisch[data-werkzeug="auswahl"] svg.brett .feld.verdeckt { cursor: pointer; }
+.tisch[data-werkzeug="auswahl"] svg.brett .feld.verdeckt:hover .flaeche { fill: rgba(255, 255, 255, 0.22); }
+.wird-gezogen { z-index: 1000 !important; opacity: 0.92; box-shadow: var(--schatten-hoch) !important; }
+.zieh-geist { position: absolute; z-index: 1001; pointer-events: none; transform: translate(-50%, -50%); }
+.zieh-geist img { width: 54px; height: 54px; object-fit: contain; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45)); }
+.geist-figur { display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; color: #fff; font-weight: 700; font-size: 11px; box-shadow: 0 3px 6px rgba(0, 0, 0, 0.45); }
+.stapel-knoepfe { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 2px; }
+.stapel-knoepfe button { padding: 0 4px; font-size: 11px; line-height: 1.5; }
+.stapel.auf-brett .stapel-knoepfe button { font-size: 8px; padding: 0 2px; line-height: 1.4; }
+.frei-stapel { width: 160px; }
+.frei-stapel .stapel-karten { cursor: pointer; }
+.rueckseite-css { width: 110px; aspect-ratio: 528 / 804; border: 5px solid var(--flaeche); border-radius: 10px; background: var(--k-rohstoff); background-image: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 6px, transparent 6px 12px), repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.06) 0 6px, transparent 6px 12px); display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffffffeb; box-shadow: var(--schatten); line-height: 1.2; }
+.rueckseite-css.leer { opacity: 0.3; }
+.rs-motiv { font-size: 30px; width: 60px; height: 60px; line-height: 56px; text-align: center; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.6); }
+.rs-name { font-size: 11px; font-weight: 600; margin-top: 6px; }
+.schale-knoepfe { float: right; display: inline-flex; gap: 3px; }
+.schale-knoepfe button { padding: 0 6px; font-size: 11px; }
+.offen-karte { cursor: grab; }
+.offen-karte .karte, .offen-karte .karte-text { width: 110px; }
+.offen-knoepfe { position: absolute; top: -12px; right: -8px; display: none; gap: 2px; }
+.offen-karte:hover .offen-knoepfe, .offen-karte:focus-within .offen-knoepfe { display: flex; }
+.offen-knoepfe button { padding: 0 5px; font-size: 13px; background: #fff; box-shadow: var(--schatten); }
+.tier-karte { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 8px; line-height: 1.2; text-align: center; border: 1px solid var(--rand); border-top: 4px solid var(--k-tier); font-size: 12px; }
+.tier-karte img { width: 70%; height: auto; image-rendering: pixelated; border-radius: 50%; }
+.tier-karte span { font-size: 10px; color: var(--text-leise); }
+.karte.gross.tier-karte { font-size: 20px; }
+.karte.gross.tier-karte span { font-size: 15px; }
+.marker { display: flex; align-items: flex-start; gap: 2px; cursor: grab; z-index: 4; }
+.marker-nadel { font-size: 22px; line-height: 1; }
+.marker-text { min-width: 60px; max-width: 200px; background: #fffbe9; border: 1px solid #e8dcae; border-radius: 4px; padding: 3px 6px; font-size: 12px; box-shadow: var(--schatten); cursor: text; user-select: text; -webkit-user-select: text; }
+.marker-weg { padding: 0 5px; font-size: 12px; }
+.spieler-panel.frei .panel-kopf { cursor: grab; }
+.panel-zeile input, .panel-zeile select { flex: 1; min-width: 0; }
+.bonus { font-size: 11.5px; color: var(--text-leise); }
+.wert-leiste { display: flex; align-items: center; gap: 5px; }
+.wert-leiste .leiste-symbol { width: 18px; }
+.kaestchen { display: flex; gap: 2px; flex: 1; }
+.kaestchen span { width: 14px; height: 10px; border-radius: 2px; background: #e7e1d3; border: 1px solid #d4ccba; }
+.kaestchen span.voll { background: var(--farbe, var(--primaer)); border-color: transparent; }
+.wert-leiste .leiste-zahl { font-variant-numeric: tabular-nums; color: var(--text-leise); width: 30px; }
+.wert-leiste button { padding: 0 7px; }
+button.ausruestung-karte { padding: 0; cursor: pointer; }
+button.ausruestung-karte:hover { outline: 2px solid var(--primaer); }
+.trinken { background: #e3f1f8; border-color: #7fb3c9; }
+.frei-rohstoffe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.frei-rohstoff { display: flex; align-items: center; gap: 3px; background: #fff; border: 1px solid var(--rand); border-radius: 6px; padding: 2px 4px; }
+.frei-rohstoff img { width: 22px; aspect-ratio: 528 / 804; border-radius: 2px; }
+.frei-rohstoff button { padding: 0 6px; }
+.frei-rohstoff b { min-width: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+.frei-rohstoff b.null { opacity: 0.4; }
+.hand-liste { list-style: none; margin: 0; padding: 4px; min-height: 30px; border: 1px dashed var(--sekundaer-rand); border-radius: 6px; display: flex; flex-direction: column; gap: 3px; background: #fff; }
+.hand-karte { display: flex; justify-content: space-between; align-items: center; gap: 4px; padding: 2px 4px; border-left: 3px solid var(--k-spezial); background: var(--flaeche); border-radius: 3px; }
+.hand-karte.typ-tag { border-left-color: var(--k-tag); }
+.hand-karte.typ-route { border-left-color: var(--k-route); }
+.hand-karte.typ-tier { border-left-color: var(--k-tier); }
+.hand-karte button { padding: 0 5px; font-size: 11px; }
+.kontext-menue { position: fixed; z-index: 60; min-width: 230px; max-width: min(560px, 94vw); max-height: 80vh; overflow-y: auto; background: var(--flaeche); border: 1px solid var(--rand); border-radius: 8px; box-shadow: var(--schatten-hoch); padding: 6px; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+.kontext-menue > button, .km-gruppe button { text-align: left; border: none; background: none; padding: 6px 8px; border-radius: 6px; display: flex; gap: 6px; align-items: center; }
+.kontext-menue > button:hover, .km-gruppe button:hover { background: #f1ebdf; }
+.km-titel { font-weight: 600; color: var(--text-leise); padding: 4px 8px 6px; border-bottom: 1px solid var(--rand); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.kontext-menue.breit { width: min(520px, 94vw); }
+.km-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 6px; }
+.km-gruppe { display: flex; flex-direction: column; gap: 1px; }
+.km-gruppe b { padding: 4px 8px; }
+.km-gruppe img { image-rendering: pixelated; border-radius: 50%; }
+.km-zurueck { padding: 0 8px; }
+.wuerfel-wahl { display: flex; gap: 10px; justify-content: center; margin: 8px 0; }
+.wuerfel-wahl button { min-width: 80px; font-size: 18px; }
+.wuerfel-ergebnis { display: flex; justify-content: center; align-items: center; min-height: 110px; color: var(--text-leise); }
+.wuerfel.gross { width: 80px; height: 80px; margin: 10px auto; }
+.wuerfel.gross .w-wert { font-size: 34px; }
+.wuerfel.gross .w-art { font-size: 14px; }
+.jagd-zeile { display: flex; gap: 16px; align-items: center; margin-top: 10px; }
+.jagd-tier { width: 110px; image-rendering: pixelated; border-radius: 50%; box-shadow: var(--schatten); }
+.ablage-raster { display: flex; flex-wrap: wrap; gap: 12px; max-height: 60vh; overflow: auto; }
+.ablage-raster figure { margin: 0; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.ablage-raster .karte, .ablage-raster .karte-text { width: 110px; }
+.protokoll-rahmen { max-height: 55vh; overflow: auto; margin-top: 8px; border: 1px solid var(--rand); border-radius: 6px; }
+.buehne-text.breit { max-width: none; margin: 10px auto 0; }
 
 /* ---------- Regeln wie V10 (Textspalte zentriert, höchstens 900 px) ---------- */
 .regeln { max-width: 900px; margin: 0 auto; padding: 4px 4px 40px; line-height: 1.55; font-size: 15px; }

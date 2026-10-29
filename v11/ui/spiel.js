@@ -17,10 +17,11 @@ import { pixel } from '../engine/hex.js';
 import { Spielleiter } from '../sim/spielleiter.js';
 import { zusammenfassungAus } from '../sim/simulation.js';
 import { brettSvg, HALB, SE, RAHMEN } from './brett.js';
-import { bild, spielerFarbe } from './bilder.js';
+import { bild, spielerFarbe, chipOrt } from './bilder.js';
 import { spezialKarte, tagesKarte, rueckseite, routenKarte } from './karten.js';
 import { ROHSTOFF, ROHSTOFF_SYMBOL, REZEPT, TIER, ENDE, BIOM } from '../engine/namen.js';
 import { STUFEN } from '../bots/bot.js';
+import { TischAnsicht } from './tisch.js';
 import { charakterText, rezeptName, rezeptSymbol } from './texte.js';
 
 const TEMPO = { schnell: 60, normal: 350, langsam: 900 };
@@ -32,9 +33,6 @@ const B = HALB; // halbe Brettgrösse
 const WELT = { x: -1210, y: -500, w: 2420, h: 1010 }; // alles, was auf dem Tisch liegt
 const PANEL_ORT = [[520, -470], [860, -470], [520, 0], [860, 0]];
 const STAPEL_IM_RAHMEN = { tag: 'oben_rechts', spezial: 'unten_rechts', route: 'unten_links' };
-const ZOOM = { min: 0.12, max: 2.5 };
-// Lage der Zahlenreihe auf der Spielerkarte (Originalbild 1752 × 1068), wie V10.
-const KARTE = { breite: 1752, hoehe: 1068, zahl0: 0.121, zahl6: 0.491, herzY: 0.66, energieY: 0.861, chip: 0.056 };
 
 export function neuesSpiel() {
   app.partie?.beenden();
@@ -42,6 +40,7 @@ export function neuesSpiel() {
 }
 
 export function spielZeigen(el) {
+  if (app.frei) { app.frei.einhaengen(el); return; }
   if (!app.partie) {
     el.innerHTML = `<div class="tisch leer"><div class="leer-tisch"><img class="vorschau-brett" src="${bild.brett}" alt="" draggable="false"/><button type="button" class="haupt gross" id="zumStart">＋ Neue Partie</button></div></div>`;
     $('#zumStart', el).addEventListener('click', () => app.neuePartieDialog());
@@ -53,16 +52,9 @@ export function spielZeigen(el) {
 
 const teamIndex = (s, i) => (s.teams ? (s.teams[0].includes(s.spieler[i].id) ? 0 : 1) : null);
 
-// Chip auf der Zahlenreihe der Spielerkarte (0 bis 6), Lage in Prozent wie V10.
-function chipOrt(wert, art) {
-  const x = (KARTE.zahl0 + ((KARTE.zahl6 - KARTE.zahl0) * Math.max(0, Math.min(6, wert))) / 6) * 100;
-  const y = (art === 'herz' ? KARTE.herzY : KARTE.energieY) * 100;
-  const w = KARTE.chip * 100, h = ((KARTE.chip * KARTE.breite) / KARTE.hoehe) * 100;
-  return `left:${(x - w / 2).toFixed(2)}%;top:${(y - h / 2).toFixed(2)}%;width:${w.toFixed(2)}%;height:${h.toFixed(2)}%`;
-}
-
-class Partie {
+class Partie extends TischAnsicht {
   constructor(cfg, sitze) {
+    super(WELT);
     this.cfg = klon(cfg);
     const seed = this.cfg.match.seed ?? Math.floor(Math.random() * 1e6) + 1;
     this.cfg.match.seed = seed;
@@ -72,7 +64,6 @@ class Partie {
     this.gesehenEreignis = this.sl.s.ereignisse.at(-1)?.nr ?? 0;
     this.gesehenTag = null;
     this.logLaenge = 0;
-    this.kamera = null; // { x, y, z }: Bildschirm = Welt · z + (x, y)
     this.panelZu = new Set();
     this.leisteZu = false;
     this.logZu = false;
@@ -89,19 +80,7 @@ class Partie {
 
   einhaengen(el) {
     this.el = el;
-    el.innerHTML = `
-      <div id="tisch" class="tisch"><div class="welt"><div class="welt-inhalt"></div></div></div>
-      <div class="unten-links">
-        <div class="zoomleiste" aria-label="Zoom">
-          <button type="button" data-zoom="raus" title="Herauszoomen">−</button>
-          <button type="button" data-zoom="wert" title="Ansicht zentrieren">100 %</button>
-          <button type="button" data-zoom="rein" title="Hineinzoomen">+</button>
-          <button type="button" data-zoom="voll" title="Vollbild">⛶</button>
-        </div>
-        <div id="minimap" class="minimap" title="Übersicht – klicken, um dorthin zu springen"></div>
-      </div>
-      <aside id="seitenleiste" class="seitenleiste" aria-label="Floss-Tableau und Gruppe"></aside>
-      <section id="logBox" class="log-box" aria-label="Spielprotokoll"></section>`;
+    el.innerHTML = this.geruestHtml({ seitenleiste: true, log: true });
     this.tischBedienung();
     if (!this.kamera) requestAnimationFrame(() => { this.zentrieren(); });
     if (this.gesehenTag === null) this.nachAenderung(); else this.render();
@@ -508,97 +487,12 @@ class Partie {
     $('[data-log-klapp]', el).addEventListener('click', () => { this.logZu = !this.logZu; this.renderProtokoll(); });
   }
 
-  // ---------------- Tisch: Zoom, Verschieben, Minimap ----------------
-  tischBedienung() {
-    const tisch = $('#tisch', this.el);
-    tisch.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const r = tisch.getBoundingClientRect();
-      this.zoomen(e.deltaY > 0 ? 1 / 1.12 : 1.12, e.clientX - r.left, e.clientY - r.top);
-    }, { passive: false });
-    let zug = null;
-    tisch.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 && e.pointerType === 'mouse') return;
-      if (e.target.closest('button, input, select, textarea, a, summary, .panel-inhalt, [data-tageskarte], [data-gross]')) return;
-      zug = { x: e.clientX, y: e.clientY, kx: this.kamera.x, ky: this.kamera.y, id: e.pointerId, bewegt: false };
-      this.gezogen = false;
-    });
-    tisch.addEventListener('pointermove', (e) => {
-      if (!zug || e.pointerId !== zug.id) return;
-      const dx = e.clientX - zug.x, dy = e.clientY - zug.y;
-      if (!zug.bewegt && Math.hypot(dx, dy) < 5) return;
-      if (!zug.bewegt) { zug.bewegt = true; tisch.setPointerCapture(e.pointerId); tisch.classList.add('zieht'); }
-      this.kamera.x = zug.kx + dx; this.kamera.y = zug.ky + dy; this.kameraSetzen();
-    });
-    const ende = (e) => {
-      if (!zug || e.pointerId !== zug.id) return;
-      this.gezogen = zug.bewegt;
-      zug = null; tisch.classList.remove('zieht');
-      setTimeout(() => { this.gezogen = false; }, 0);
-    };
-    tisch.addEventListener('pointerup', ende);
-    tisch.addEventListener('pointercancel', ende);
-    for (const b of $$('[data-zoom]', this.el)) b.addEventListener('click', () => {
-      const z = b.dataset.zoom, r = tisch.getBoundingClientRect();
-      if (z === 'rein') this.zoomen(1.25, r.width / 2, r.height / 2);
-      else if (z === 'raus') this.zoomen(0.8, r.width / 2, r.height / 2);
-      else if (z === 'wert') this.zentrieren();
-      else if (document.fullscreenElement) document.exitFullscreen?.(); else document.documentElement.requestFullscreen?.().catch(() => {});
-    });
-    const mini = $('#minimap', this.el);
-    mini.addEventListener('click', (e) => {
-      const r = mini.getBoundingClientRect();
-      const wx = WELT.x + ((e.clientX - r.left) / r.width) * WELT.w, wy = WELT.y + ((e.clientY - r.top) / r.height) * WELT.h;
-      const t = tisch.getBoundingClientRect();
-      this.kamera.x = t.width / 2 - wx * this.kamera.z; this.kamera.y = t.height / 2 - wy * this.kamera.z;
-      this.kameraSetzen();
-    });
-    if (!this.groesseBeobachter) {
-      this.groesseBeobachter = new ResizeObserver(() => this.minimapSicht());
-    }
-    this.groesseBeobachter.disconnect();
-    this.groesseBeobachter.observe(tisch);
-  }
-
-  // Sichtbare Fläche des Tisches (ohne Seitenleiste).
-  flaeche() {
-    const t = $('#tisch', this.el);
-    const leiste = this.leisteZu ? 44 : $('#seitenleiste', this.el)?.offsetWidth ?? 0;
-    return { w: Math.max(200, (t?.clientWidth ?? 800) - leiste), h: Math.max(200, t?.clientHeight ?? 600) };
-  }
-
-  zentrieren() {
-    const f = this.flaeche();
-    const z = Math.max(ZOOM.min, Math.min(ZOOM.max, Math.min((f.w - 30) / WELT.w, (f.h - 30) / WELT.h)));
-    this.kamera = { z, x: f.w / 2 - (WELT.x + WELT.w / 2) * z, y: f.h / 2 - (WELT.y + WELT.h / 2) * z };
-    this.kameraSetzen();
-  }
-
-  zoomen(faktor, mx, my) {
-    const k = this.kamera;
-    const z = Math.max(ZOOM.min, Math.min(ZOOM.max, k.z * faktor));
-    k.x = mx - (mx - k.x) * (z / k.z); k.y = my - (my - k.y) * (z / k.z); k.z = z;
-    this.kameraSetzen();
-  }
-
+  // ---------------- Tisch: Panel zeigen, Minimap ----------------
   panelZeigen(i) {
     const [x, y] = PANEL_ORT[i] ?? [520, -470];
-    const f = this.flaeche();
-    if (this.kamera.z < 0.6) this.kamera.z = 0.6;
-    this.kamera.x = f.w / 2 - (x + 160) * this.kamera.z; this.kamera.y = 90 - y * this.kamera.z;
     this.panelZu.delete(i);
+    this.zeigeWelt(x + 160, y + 220);
     this.renderTisch(); this.minimapZeichnen();
-  }
-
-  kameraSetzen() {
-    if (!this.kamera || !this.el) return;
-    const welt = $('.welt', this.el);
-    if (!welt) return;
-    const k = this.kamera;
-    welt.style.transform = `translate(${k.x.toFixed(1)}px, ${k.y.toFixed(1)}px) scale(${k.z.toFixed(4)})`;
-    const w = $('[data-zoom="wert"]', this.el);
-    if (w) w.textContent = `${Math.round(k.z * 100)} %`;
-    this.minimapSicht();
   }
 
   minimapZeichnen() {
@@ -615,14 +509,6 @@ class Partie {
       <image href="${bild.brett}" x="${-B}" y="${-B}" width="${2 * B}" height="${2 * B}" preserveAspectRatio="none"/>
       ${panels}${figuren}<rect class="sicht" x="0" y="0" width="0" height="0"/></svg>`;
     this.minimapSicht();
-  }
-
-  minimapSicht() {
-    const r = $('#minimap .sicht', this.el);
-    if (!r || !this.kamera) return;
-    const k = this.kamera, f = this.flaeche();
-    r.setAttribute('x', (-k.x / k.z).toFixed(0)); r.setAttribute('y', (-k.y / k.z).toFixed(0));
-    r.setAttribute('width', (f.w / k.z).toFixed(0)); r.setAttribute('height', (f.h / k.z).toFixed(0));
   }
 
   // ---------------- Dialoge ----------------

@@ -10,6 +10,19 @@ const TEMPO = [['schnell', 'schnell'], ['normal', 'normal'], ['langsam', 'langsa
 export function toolbarZeichnen(teil = 'alle') {
   const p = app.partie, s = p?.sl.s;
   const imSpiel = app.aktuellerReiter?.() === 'spiel';
+  // Freier Tisch: eigene Werkzeugleiste wie V10 (Modus-Badge «Frei»).
+  $('#tbModus').classList.toggle('frei', !!app.frei);
+  $('#toolbar').classList.toggle('frei-modus', !!app.frei && imSpiel);
+  if (app.frei) {
+    $('#tbModus').textContent = 'Frei';
+    $('#tbModus').title = 'Freier Tisch: keine Regelprüfung, nur Menschen';
+    if (imSpiel) { app.frei.toolbar(teil); return; }
+    // In den anderen Reitern: Werkzeuge des Tisches ausblenden (sie wirken nur auf dem Tisch).
+    $('#tbTag').hidden = true; $('#tbTempo').innerHTML = ''; $('#tbKnoepfe').innerHTML = '';
+    $('#tbRechts').innerHTML = '<button type="button" class="haupt" id="tbNeu" title="Neue Partie">＋<span class="tb-text"> Neue Partie</span></button>';
+    $('#tbNeu').addEventListener('click', () => app.neuePartieDialog());
+    return;
+  }
   $('#tbModus').textContent = MODUS_KURZ[s?.modus ?? app.cfg.match.modus] ?? '';
   $('#tbModus').title = s ? 'Modus der laufenden Partie' : 'Modus der nächsten Partie (im Startdialog änderbar)';
 

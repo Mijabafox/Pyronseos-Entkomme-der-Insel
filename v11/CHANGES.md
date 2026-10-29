@@ -151,7 +151,7 @@ Nur die Oberfläche wurde geändert (`index.html`, `style.css`, `ui/`). Engine, 
 | Setup enthält nur Start-relevantes | ✓ Preset, Modus, Spielerzahl, Seed, Sitze, Prüfung, Start, Link «Regler anpassen». |
 | Start springt zu «Spiel», Regler während Partie gesperrt | ✓ Inklusive «Partie beenden und entsperren». |
 | Tests grün, keine Engine-Datei geändert | ✓ `node --test test/*.test.mjs`: 55 von 55. Ein `git diff` gegen main zeigt in `engine/`, `bots/`, `sim/`, `config/` und `test/` keine Änderung. |
-| Kein ß, Umlaute als ä/ö/ü | ✓ Geprüft in `ui/`, `index.html` und `style.css`. |
+| Kein scharfes S, Umlaute als ä/ö/ü | ✓ Geprüft in `ui/`, `index.html` und `style.css`. |
 
 Zusätzlich im Browser getestet:
 
@@ -161,3 +161,139 @@ Zusätzlich im Browser getestet:
 - Hot-Seat im Team-Modus mit Übergabe-Dialog; fremde Charaktere sind verdeckt.
 - Replay aus dem Ende-Dialog.
 - Alle Reiter ohne Fehler in der Konsole.
+
+## Korrektur: spielbar wie V10, lesbar, Freier Tisch zurück
+
+Geändert wurden nur `index.html`, `style.css` und `ui/`. Neue Oberflächendateien sind:
+- `ui/startdialog.js`
+- `ui/tisch.js`
+- `ui/texte.js`
+- `ui/frei.js`
+- `ui/frei-tisch.js`
+
+`engine/`, `bots/`, `sim/`, `config/` und `test/` sind unverändert; es war keine Engine-Änderung nötig. Der Freie Tisch nutzt die Engine nur lesend (Brett und Stapel aus `neuePartie`, Zufall aus `engine/rng.js`). Diese Korrektur ersetzt den Abschnitt «Nachbesserung», wo sich beide widersprechen.
+
+**Stufe 1 – Start wie V10**
+
+- Die Reiter sind Spiel, Regler, Karten, Simulation, Replay, Regeln. Der Reiter «Setup» ist entfernt, beim Öffnen ist «Spiel» aktiv.
+- Der Startdialog «Neue Partie» liegt über dem Spieltisch. Er enthält Spielmodus, Spielart, Spieler (Anzahl, Name, Mensch oder KI, KI-Stufe) und Seed.
+- Voreingestellt ist Standard V10, Koop, «Du» plus zwei KI auf «normal». Ein Klick auf «Partie starten» genügt.
+- «Erweitert» ist standardmässig zugeklappt und enthält:
+  - die Preset-Auswahl;
+  - die KI-Persönlichkeit je Sitz als eigener aufklappbarer Block, ein Regler pro Zeile (Beschriftung, Slider, Wert), Siegweg und Fehlerquoten je eine Zeile;
+  - den Link «Regler öffnen».
+- Das Prüfergebnis erscheint nur bei Fehlern oder Warnungen. Fehler sperren den Start mit Klartext und verlinken auf den Regler.
+- «＋ Neue Partie» öffnet den Dialog. Mit «Abbrechen» bleibt die laufende Partie bestehen.
+
+**Stufe 2 – Lesbarkeit**
+
+- Ausserhalb der zoombaren Tischwelt gilt Schrift von mindestens 14 px mit Zeilenabstand 1.4. Formulare stehen als Raster: Beschriftung links, Feld rechts.
+- Karten-Reiter:
+  - zwei Tabs «Tageskarten» und «Spezialkarten»;
+  - ein Raster aus Kartenbildern (168 px) mit Name, Art und Anzahl, dazu eine Suche;
+  - ein Klick öffnet den Editor im Dialog in voller Breite: an/aus, Anzahl, Name, Symbol, Art, Text, Stimmungstext, Effekte mit passenden Feldern, JSON für Fortgeschrittene, Variante und Löschen.
+- Regler-Reiter:
+  - feste Bereichsliste (220 px), die Regler in einer Spalte mit Name, Feld, Standard, Min und Max sowie Knopf «Standard»;
+  - lesbare Gruppentitel wie «Ertrag › Baum › Bonus mit Werkzeug»;
+  - fehlende Kostenwerte erscheinen als 0.
+- Toolbar: Die Reitertexte bleiben ab 1100 px sichtbar, ohne waagrechtes Scrollen.
+- Ein automatischer Prüfer hat alle Reiter, Dialoge und das Kontextmenü bei 1280×800 und 1920×1080 untersucht:
+  - auf waagrechtes Scrollen;
+  - auf abgeschnittene Elemente;
+  - auf herausragende und überlappende Elemente;
+  - auf Schrift unter 14 px.
+  
+  Ergebnis: 0 Befunde.
+
+**Stufe 3 – Spielbrett und Regeln wie V10**
+
+- Das Brett wie in V10:
+  - keine Gitterlinien;
+  - Ziel- und Hervorhebungsrahmen wie V10;
+  - Figuren mit Kürzel (Zahl oder die ersten zwei Buchstaben) und Werkzeug-Ausschnitten;
+  - Tier-Token 17;
+  - KI-Spur mit Pfeil und Zielkreis;
+  - Trinken-Knopf direkt am Feld;
+  - Sammelfeld- und Floss-Ziel-Rahmen.
+- Der Tisch wie in V10:
+  - Tages-, Spezial- und Routenkarten liegen in den Rahmen des Brettbildes;
+  - links Rohstoffkarten, «Heute», Spezial-Ablage, Tier-Zugbeutel und Würfelschale;
+  - Panels bei x 520/860.
+- Die Seitenleiste wie in V10:
+  - Floss-Tableau mit «benötigt / Gruppe / Sammelfeld», «Fehlt noch» und Haken-Liste;
+  - Gruppe mit Charakter, Werten, Rohstoffen und Ausrüstung.
+- Regeln-Reiter:
+  - Aufbau der V10-Spielanleitung mit Spielmodi, Spielfeld, Charakteren, Zeit, Zug, Tieren, Crafting, Spezialkarten, Kompass, Duellen, Tages-Ereignissen, Siegbedingungen, Materialvorrat und zwei Spielarten;
+  - höchstens 900 px breit und zentriert;
+  - Tabellen mit Karten-, Plättchen- und Tierbildern;
+  - Werte aus der aktuellen Konfiguration, Abweichungen vom Standard markiert (Tooltip zeigt den Standard);
+  - Export «Regeln als Text».
+- Rezeptnamen: Seil, Steinaxt, Spitzhacke, Holzspeer, Steinmachete, Bandage, Lagerfeuer, Shelter (`ui/texte.js`).
+
+**Stufe 4 – Freier Tisch**
+
+- Die Spielart wählst du im Startdialog («Regel-Modus / Freier Tisch»). In der Toolbar steht das Modus-Badge «Frei», wie in V10. Es gibt keine Regel-Engine im Ablauf und keine Bots.
+- Ziehen und Klicken:
+  - Figuren ziehen, oder anklicken und dann ein Feld anklicken.
+  - Verdecktes Feld anklicken = aufdecken; ein Tierfeld zieht dabei aus dem Beutel.
+  - Plättchen-Inhalt auf ein anderes Feld ziehen = verschieben, vom Brett ziehen = entfernen.
+  - Rechtsklick auf Feld oder Figur öffnet das Menü: Aufdecken, Verdecken, Inhalt entfernen, Inhalt ändern (Plättchen des Bioms oder Tier direkt), Lagerfeuer, Shelter, Figur hierher.
+- Werkzeuge: Auswahl, Hand, Pinsel (nur im Edit-Modus, mit Biom-Auswahl), Nebel, Marker (Notiz-Pin mit editierbarem Text).
+- Stapel (Tages-, Spezial-, Routen-, Rohstoffkarten, Tier-Zugbeutel):
+  - Bedienung: ziehen, mischen, Ablage ansehen (Karte zurück auf den Tisch), Ablage zurückmischen, eigene Karte, zurücksetzen.
+  - Offene Karten lassen sich frei verschieben.
+  - Auf ein Panel gezogen kommen sie auf die Hand; eine Rohstoffkarte zählt dort +1.
+  - ✋ / 🔍 / 🗑 an der Karte.
+- Panels:
+  - Name, Rolle, Fähigkeit;
+  - Spielerkarte mit Chips;
+  - Herzen und Energie als Leisten mit +/−;
+  - Trinken auf Wasserfeldern;
+  - Ausrüstung per Klick;
+  - Rohstoffe mit +/−;
+  - W42-Startwurf, «Figur zeigen», «Am Zug»;
+  - Handkarten (ansehen, ausspielen, ablegen).
+  - Panels lassen sich am Kopf ziehen und einklappen.
+- Toolbar und Hinweisleiste:
+  - Tag −/+, zuletzt gezogene Tageskarte, Seed;
+  - Rezepte, Fluchtwege, Tierjagd (Bonus, Tier ziehen, W6), Würfeln (W3, W6, W42), eigene Karte, Spieler dazu (bis 4);
+  - Szenarien (speichern, laden, löschen, als Datei);
+  - Playtest-Protokoll (kopieren, CSV, leeren);
+  - Rückgängig (auch Strg+Z);
+  - «Nächster Spieler» und «Tageskarte ziehen» in der Hinweisleiste.
+- Der Tisch wird automatisch im Browser gespeichert. Im Startdialog lässt er sich mit «Letzten Tisch fortsetzen» weiterspielen.
+- Gemeinsame Tisch-Mechanik (`ui/tisch.js`) für beide Spielarten: Zoom, Verschieben, Minimap, Vollbild. Die Minimap berücksichtigt jetzt das Seitenverhältnis beim Klick.
+
+**Abweichungen**
+
+- Der Startdialog liegt nicht-modal über dem abgedunkelten Tisch. So bleiben die Reiter (z. B. Regeln) vor dem ersten Spiel erreichbar. In V10 ist der Dialog modal.
+- Auf dem zoombaren Tisch (Panels, Stapel, Karten, Marker, Würfelschale) bleiben die kleineren V10-Schriftgrössen; die Mindestgrösse von 14 px gilt für alle Reiter, die Leisten und die Dialoge. Beim Hineinzoomen wird alles gross.
+- Die Toolbar des Freien Tisches hat 22 Bedienelemente. Statt sie wie V10 rechts abzuschneiden, bricht sie auf eine zweite Zeile um.
+- Freier Tisch:
+  - Den V10-Stapel «Baupläne & Rezepte» gibt es nicht, weil es keine Bauplan-Kartenbilder gibt. Die Rezepte stehen im Knopf «📜 Rezepte».
+  - Die Spielerkarte im Panel ist ganz zu sehen (V10: schmaler Balken).
+- Die Regel-Fragen (lokaler KI-Server) aus V10 bleiben weg, wie verlangt.
+- Der Prompt nennt das Repository `Mijabafox/insel-survival`. Gearbeitet wurde wie bisher in `Mijabafox/Pyronseos-Entkomme-der-Insel`.
+
+**Checkliste Korrektur**
+
+| Punkt | Ergebnis |
+|---|---|
+| Seite öffnet auf «Spiel», Startdialog wie V10, ein Klick startet Koop mit Standard V10 | ✓ |
+| Reiter «Setup» weg, «Erweitert» zugeklappt und lesbar | ✓ 0 Überlappungen im Persönlichkeitsraster |
+| Reiter «Regler» vollständig und lesbar, Suche und Presets funktionieren, Einzel-Reset | ✓ im Browser getestet (Suche, Preset speichern, laden, löschen, Standard je Regler) |
+| Nichts überlappt oder wird abgeschnitten (1280×800 und 1920×1080, alle Reiter) | ✓ Prüfer: 0 Befunde; Screenshots in `docs/screenshots/` |
+| Karten-Reiter: grosse Bilder, zwei Tabs, Editor im Dialog | ✓ |
+| Spielbrett wie V10 (Nebeneinander-Vergleich) | ✓ `docs/screenshots/vergleich-v10-*.png` und `vergleich-v11-*.png` |
+| Regeln-Reiter wie V10 | ✓ |
+| Freier Tisch wie V10, Auswahl im Startdialog und Badge in der Werkzeugleiste | ✓ alle Werkzeuge, Stapel, Dialoge, Rückgängig und Fortsetzen getestet |
+| Alle Tests grün, keine Engine-Datei geändert | ✓ 55 von 55; `git diff` gegen main zeigt keine Änderung in `engine/`, `bots/`, `sim/`, `config/`, `test/` |
+| Kein scharfes S, Umlaute als ä, ö, ü | ✓ |
+
+Zusätzlich im Browser getestet:
+- Ganze KI-Partien in Koop, Team und PvP bis zum Ende-Dialog.
+- Replay aus dem Ende-Dialog.
+- Ein Menschen-Zug (Würfeln, Aufdecken, Gehen, Zug beenden).
+- Zoom, Verschieben und Minimap.
+- Einklappen von Seitenleiste, Protokoll und Panels.
+- In keiner Prüfung gab es Fehler in der Konsole.

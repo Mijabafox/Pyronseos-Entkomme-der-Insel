@@ -6,6 +6,7 @@ import { app, EINGEBAUT, presetLaden, sitzeAnpassen, pruefen, geaendertZahl } fr
 import { STUFEN } from '../bots/bot.js';
 import { spielerFarbe } from './bilder.js';
 import { pruefHtml } from './regler.js';
+import { freierTischGespeichert } from './frei.js';
 
 const PERS = [['risiko', 'Risikobereitschaft'], ['kooperation', 'Kooperation'], ['aggression', 'Aggression'], ['ungeduld', 'Ungeduld'], ['sparsamkeit', 'Sparsamkeit']];
 const SIEGWEG = { keiner: 'kein bevorzugter', floss: 'Floss', feuer: 'Küstenfeuer-Kette', wrack: 'Flugzeugwrack' };
@@ -14,8 +15,6 @@ const MODI = {
   team: ['Team (2 gegen 2)', 'das erste Team, dessen beide Mitglieder fliehen, gewinnt · genau 4 Sitze'],
   pvp: ['PvP (jeder gegen jeden)', 'wer zuerst flieht oder als Letzter übrig bleibt, gewinnt · 2 bis 4 Sitze'],
 };
-// Der Freie Tisch wird erst mit ui/frei.js angeboten.
-export const FREI_VERFUEGBAR = false;
 const SPIELART = {
   regel: ['⚙️ Regel-Modus', 'Das Programm setzt alle Regeln durch. KI-Spieler möglich. Alles, was passiert, siehst du auf dem Tisch.'],
   frei: ['🃏 Freier Tisch', 'Wie ein echter Spieltisch für Playtests: alles frei verschiebbar, Werte von Hand, keine Regelprüfung. Nur Menschen (Hot-Seat).'],
@@ -36,7 +35,7 @@ export function startDialogZeigen() {
   document.body.classList.add('start-sichtbar');
   if (!d.open) d.show();
   d.onclose = () => { d.classList.remove('start-offen'); document.body.classList.remove('start-sichtbar'); };
-  d.onkeydown = (e) => { if (e.key === 'Escape' && app.partie) { e.preventDefault(); d.close(); } };
+  d.onkeydown = (e) => { if (e.key === 'Escape' && (app.partie || app.frei)) { e.preventDefault(); d.close(); } };
   setTimeout(() => $('#startKnopf', d)?.focus(), 0);
 }
 
@@ -59,9 +58,9 @@ function zeichnen() {
     <fieldset><legend>Spielmodus</legend>
       ${Object.entries(MODI).map(([k, [name, text]]) => `<label class="wahl"><input type="radio" name="modus" value="${k}" ${m.modus === k ? 'checked' : ''}/><span><b>${name}</b><br><span class="hinweis">${text}</span></span></label>`).join('')}
     </fieldset>
-    ${FREI_VERFUEGBAR ? `<fieldset><legend>Spielart</legend>
+    <fieldset><legend>Spielart</legend>
       ${Object.entries(SPIELART).map(([k, [name, text]]) => `<label class="wahl"><input type="radio" name="spielart" value="${k}" ${art === k ? 'checked' : ''}/><span><b>${name}</b><br><span class="hinweis">${text}</span></span></label>`).join('')}
-    </fieldset>` : ''}
+    </fieldset>
     <fieldset><legend>Spieler</legend>
       <div class="zeile">
         <label>Anzahl <select id="sdAnzahl" ${m.modus === 'team' ? 'disabled title="Team ist immer 2 gegen 2"' : ''}>${[2, 3, 4].map((k) => `<option ${k === (m.modus === 'team' ? 4 : m.spieler) ? 'selected' : ''}>${k}</option>`).join('')}</select></label>
@@ -78,7 +77,8 @@ function zeichnen() {
     </details>
     ${meldungen ? `<div class="start-pruefung">${pruefHtml(v)}</div>` : ''}
     <div class="dialog-knoepfe">
-      ${app.partie ? '<button type="button" id="sdAbbrechen">Abbrechen</button>' : ''}
+      ${app.partie || app.frei ? '<button type="button" id="sdAbbrechen">Abbrechen</button>' : ''}
+      ${frei && freierTischGespeichert() ? '<button type="button" id="sdFortsetzen" title="Den zuletzt gespielten freien Tisch weiterspielen">↻ Letzten Tisch fortsetzen</button>' : ''}
       <button type="submit" class="haupt gross" id="startKnopf" ${frei || v.ok ? '' : 'disabled title="Erst die Fehler oben beheben"'}>▶ Partie starten</button>
     </div>
   </form>`;
@@ -161,6 +161,7 @@ function verdrahten(d) {
     if (z.reiter) app.reiter(z.reiter); else app.reglerOeffnen(z.pfad ?? null, z.bereich);
   });
   $('#sdAbbrechen', d)?.addEventListener('click', () => d.close());
+  $('#sdFortsetzen', d)?.addEventListener('click', () => { d.close(); app.freiStarten(true); });
   f.addEventListener('submit', (e) => {
     e.preventDefault();
     const seed = $('#sdSeed', d).value.replace(/\D/g, '');
@@ -168,6 +169,6 @@ function verdrahten(d) {
     app.speichern();
     if ((app.spielart ?? 'regel') === 'regel' && !pruefen().ok) return;
     d.close();
-    app.partieStarten();
+    if (app.spielart === 'frei') app.freiStarten(false); else app.partieStarten();
   });
 }
