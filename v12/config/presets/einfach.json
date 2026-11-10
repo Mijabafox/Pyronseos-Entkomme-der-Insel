@@ -1,0 +1,9 @@
+{
+  "meta": { "name": "Einfach", "beschreibung": "Mehr Zeit, unbegrenzter Vorrat, schwächere Gefahren" },
+  "match": { "tage": { "ruhig": 16, "ereignisse": 9, "lava": true } },
+  "figur": { "herzen": 6 },
+  "zug": { "rasten": 3, "rastenShelter": 5 },
+  "vorrat": { "unbegrenzt": true },
+  "fluchtwege": { "floss": { "solide": { "proPerson": { "holz": 3, "seil": 2, "nahrung": 1, "blaetter": 0 } } } },
+  "tiere": { "zielGross": 4 }
+}

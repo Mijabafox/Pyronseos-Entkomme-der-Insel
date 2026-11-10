@@ -1,0 +1,71 @@
+// Gemeinsamer Zustand der Oberfläche: aktuelle Konfiguration, Sitze, laufende Partie, Presets.
+import { standardLaden, zusammenfuehren, klon, unterschiede, setzen } from '../engine/config.js';
+import { validieren } from '../engine/validator.js';
+import { speicher } from './dom.js';
+
+export const EINGEBAUT = ['standard', 'einfach', 'hart'];
+const SCHLUESSEL = { cfg: 'v12-konfig', sitze: 'v12-sitze', presets: 'v12-presets', tempo: 'v12-tempo', anzeige: 'v12-anzeige' };
+
+export const app = {
+  standard: null, cfg: null, sitze: [], partie: null, presets: {}, eigene: {}, presetName: 'Standard V12',
+  hoerer: new Set(),
+  melden(was) { for (const h of this.hoerer) h(was); },
+  partieLaeuft() { return !!(this.partie && !this.partie.sl.s.ende); },
+  speichern() { speicher.schreiben(SCHLUESSEL.cfg, teilKonfig(this.cfg, this.standard)); speicher.schreiben(SCHLUESSEL.sitze, this.sitze); },
+  tempo: speicher.lesen(SCHLUESSEL.tempo, { art: 'normal', pause: 2 }),
+  tempoSpeichern() { speicher.schreiben(SCHLUESSEL.tempo, this.tempo); },
+  // Schalter rechts in der Toolbar: KI-Spur auf dem Brett, neue Karten gross in der Tischmitte zeigen.
+  anzeige: { spur: true, buehne: true, ...speicher.lesen(SCHLUESSEL.anzeige, {}) },
+  anzeigeSpeichern() { speicher.schreiben(SCHLUESSEL.anzeige, this.anzeige); },
+  eigeneSpeichern() { speicher.schreiben(SCHLUESSEL.presets, this.eigene); },
+};
+
+// Nur die Abweichungen vom Standard (für Presets und Speicher).
+export function teilKonfig(cfg, standard) {
+  const t = {};
+  for (const u of unterschiede(standard, cfg)) setzen(t, u.pfad, klon(u.b));
+  return t;
+}
+
+export function sitzeAnpassen() {
+  const n = app.cfg.match.modus === 'team' ? 2 * app.cfg.match.teamGroesse : app.cfg.match.spieler;
+  while (app.sitze.length < n) {
+    const k = app.sitze.length;
+    let nr = k, name = k === 0 ? 'Du' : `KI ${nr}`;
+    while (app.sitze.some((s) => s.name === name)) name = `KI ${++nr}`;
+    app.sitze.push({ name, ki: k > 0, stufe: app.cfg.ki.standardStufe, persoenlichkeit: {} });
+  }
+  app.sitze.length = n;
+}
+
+export async function startZustand() {
+  app.standard = await standardLaden();
+  for (const n of EINGEBAUT) {
+    try { app.presets[n] = await (await fetch(new URL(`../config/presets/${n}.json`, import.meta.url))).json(); } catch { app.presets[n] = {}; }
+  }
+  app.eigene = speicher.lesen(SCHLUESSEL.presets, {});
+  app.cfg = zusammenfuehren(app.standard, speicher.lesen(SCHLUESSEL.cfg, {}));
+  app.presetName = app.cfg.meta?.name ?? 'Standard V12';
+  app.sitze = speicher.lesen(SCHLUESSEL.sitze, []);
+  sitzeAnpassen();
+}
+
+export function presetLaden(teil, name) {
+  app.cfg = zusammenfuehren(app.standard, teil ?? {});
+  if (name) { app.cfg.meta = { ...app.cfg.meta, name }; app.presetName = name; }
+  sitzeAnpassen();
+  app.speichern();
+  app.melden('konfig');
+}
+
+// Spielerzahl der aktuellen Konfiguration (Team ist immer 2 gegen 2).
+export function spielerZahl(cfg = app.cfg) { return cfg.match.modus === 'team' ? 2 * cfg.match.teamGroesse : cfg.match.spieler; }
+
+// Prüfergebnis der aktuellen Konfiguration (Startdialog und Regler zeigen dasselbe).
+export function pruefen(cfg = app.cfg) { return validieren(cfg, { modus: cfg.match.modus, spieler: spielerZahl(cfg) }); }
+
+// Anzahl der Werte, die vom Standard V12 abweichen (ohne Name des Presets).
+export function geaendertZahl(cfg = app.cfg) { return unterschiede(app.standard, cfg).filter((u) => !u.pfad.startsWith('meta')).length; }
+
+// Laufende Partie beenden, damit die Regler wieder offen sind.
+export function partieBeenden() { app.partie?.beenden(); app.partie = null; app.melden('partie'); }

@@ -1,0 +1,12 @@
+{
+  "name": "pyronesos-v12",
+  "version": "11.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pyronesos Prototyp V12 «Entkomme der Insel»: Regel-Engine, Test-Schalter, Bots und Simulation",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "sim": "node sim/cli.mjs",
+    "serve": "python3 -m http.server 8011"
+  }
+}
