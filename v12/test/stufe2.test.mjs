@@ -65,7 +65,7 @@ test('1.7 Niederlage im Tierkampf: Schaden, zurück aufs Herkunftsfeld, Zugende,
   assert.equal(s.statistik.zurueckgesetzt, 1);
 });
 
-test('Kleines Tier: −1 Herz, Zurücksetzen und Zugende', async () => {
+test('Kleines Tier: −1 Herz, das Tier verschwindet, die Figur bleibt auf dem Feld, Zugende', async () => {
   const s = partie(await standardLaden(), { seed: 3 });
   const t = feld(s, (f) => f.inhalt === 'tier' && f.ring > 1 && f.ring < 7);
   t.aufgedeckt = true; t.tier = 'hase';
@@ -76,7 +76,9 @@ test('Kleines Tier: −1 Herz, Zurücksetzen und Zugende', async () => {
   s.testWuerfe = [1];
   ausfuehren(s, { typ: 'kaempfen' });
   assert.equal(s.spieler[0].herzen, 4, 'kleines Tier: −1 Herz');
-  assert.equal(s.spieler[0].feld, von);
+  assert.equal(s.spieler[0].feld, t.key, 'bleibt auf dem Feld stehen');
+  assert.equal(s.felder[t.key].tier, null, 'das Tier verschwindet');
+  assert.ok(s.tierBeutel.includes('hase'), 'zurück in den Beutel');
   assert.notEqual(s.aktiv, 0);
 });
 

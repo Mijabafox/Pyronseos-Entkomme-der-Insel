@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { standardLaden, klon } from '../engine/config.js';
 import { nachbarn, schluessel, abstand, MITTE } from '../engine/hex.js';
-import { ausfuehren, erlaubteAktionen, neuerZug, weitsichtZiele, flossGrund, beuteKategorien, craftGrund, kompassBesitzer } from '../engine/engine.js';
+import { ausfuehren, erlaubteAktionen, neuerZug, weitsichtZiele, flossGrund, beuteKategorien, craftGrund, kompassBesitzer, entscheider } from '../engine/engine.js';
 import { validieren } from '../engine/validator.js';
 import { sicht } from '../engine/sicht.js';
 import { SCHALTER, schalterSetzen, schalterStand, schalterListe } from '../engine/schalter.js';
@@ -11,7 +11,9 @@ import { serie, auswerten } from '../sim/simulation.js';
 import { cfgMit, partie } from './hilfe.mjs';
 
 function bereit(s, i = 0, phase = 'bewegung') {
-  s.aktiv = i; s.tagesKarte = 'ruhig'; s._modsFuer = null;
+  s.aktiv = i; s.tagesKarte = 'ruhig'; s._modsFuer = null; s.startSpieler = 0;
+  // Feste Charaktere ohne Sonderwirkung auf Herzen, Schritte und Abbau (Jäger nur im Tierkampf).
+  s.spieler.forEach((p, k) => { if (k !== i || ['ueberlebenskuenstler', 'laeufer', 'sammlerin'].includes(p.charakter)) { p.charakter = k === i ? 'sanitaeter' : 'kundschafter'; p.herzen = 5; } });
   s.zug = neuerZug(s); s.zug.phase = phase;
   return s.spieler[i];
 }
@@ -423,4 +425,129 @@ test('Simulation: jeder der drei Fluchtwege ist erreichbar (die anderen beiden a
     assert.ok(a.proWeg[weg] > 0, `${weg}: mindestens ein Sieg in 30 Partien`);
     assert.equal(a.abbrueche, 0);
   }
+});
+
+// ---- Regeländerungen vom 10.11.2026 ----
+
+test('Shelter wie die Wasserquelle: auch nach der Bewegung +4 Energie (höchstens 6), danach endet der Zug; Rasten ohne Shelter +2', async () => {
+  const s = partie(await standardLaden(), { seed: 40, n: 2 });
+  const p = bereit(s, 0);
+  const f = s.felder[p.feld];
+  const nb = nachbar(s, p.feld, (x) => !x.tier && x.inhalt !== 'tier' && x.inhalt !== 'spezial');
+  s.felder[nb].aufgedeckt = true; s.felder[nb].inhalt = 'leer';
+  s.felder[nb].bau = { art: 'shelter', besitzer: 's1', brennt: false };
+  p.energie = 2;
+  assert.ok(!hat(s, { typ: 'shelterErholen' }), 'nicht ohne Shelter');
+  ausfuehren(s, { typ: 'bewegen', feld: nb });
+  assert.ok(hat(s, { typ: 'shelterErholen' }), 'auch nach der Bewegung');
+  ausfuehren(s, { typ: 'shelterErholen' });
+  assert.equal(p.energie, 5, '1 + 4');
+  assert.notEqual(s.aktiv, 0, 'der Zug endet');
+  // höchstens 6
+  const t = partie(await standardLaden(), { seed: 40, n: 2 });
+  const q = bereit(t, 0);
+  t.felder[q.feld].bau = { art: 'shelter', besitzer: 's1', brennt: false };
+  q.energie = 4;
+  ausfuehren(t, { typ: 'shelterErholen' });
+  assert.equal(q.energie, 6);
+  // Rasten im Shelter ohne Erholen-Aktion gibt nur +2
+  const u = partie(await standardLaden(), { seed: 40, n: 2 });
+  const r = bereit(u, 0);
+  u.felder[r.feld].bau = { art: 'shelter', besitzer: 's1', brennt: false };
+  r.energie = 1;
+  ausfuehren(u, { typ: 'zugBeenden' });
+  assert.ok(r.energie <= 4, 'Rasten +2 (plus höchstens 1 für den neuen Tag)');
+  void f;
+});
+
+test('Nach einem Duell endet der Zug: normales Duell, Fern-Duell und Gleichstand', async () => {
+  const cfg = await standardLaden();
+  for (const [art, wuerfe] of [['angreifen', [6, 1]], ['angreifen', [3, 3]], ['duell', [6, 1]], ['angreifen', [1, 6]]]) {
+    const s = partie(cfg, { seed: 41, modus: 'pvp', n: 2 });
+    const p = bereit(s, 0), q = s.spieler[1];
+    q.feld = p.feld; q.hand.holz = 2; p.hand.holz = 2;
+    if (art === 'duell') p.karten.push('duell');
+    s.testWuerfe = [...wuerfe];
+    ausfuehren(s, { typ: art, ziel: 1 });
+    if (s.zug.phase === 'beute') ausfuehren(s, erlaubteAktionen(s)[0]);
+    assert.notEqual(s.aktiv, 0, `${art} ${wuerfe.join(':')}: der Zug ist zu Ende`);
+  }
+});
+
+test('Grosses Tier: bei Niederlage zurück aufs vorherige Feld, das Tier bleibt, Zug endet; Sieg: Tier zurück in den Beutel', async () => {
+  const cfg = await standardLaden();
+  const s = partie(cfg, { seed: 42, n: 2 });
+  const t = feld(s, (f) => f.inhalt === 'tier' && f.ring > 1 && f.ring < 7);
+  t.aufgedeckt = true; t.tier = 'tiger';
+  const von = nachbar(s, t.key, (f) => !f.tier && f.inhalt !== 'tier' && f.inhalt !== 'spezial');
+  s.felder[von].aufgedeckt = true; s.felder[von].inhalt = 'leer';
+  const p = bereit(s, 0); p.feld = von; p.energie = 6;
+  ausfuehren(s, { typ: 'bewegen', feld: t.key });
+  s.testWuerfe = [1];
+  ausfuehren(s, { typ: 'kaempfen' });
+  assert.equal(p.feld, von); assert.equal(s.felder[t.key].tier, 'tiger'); assert.equal(p.herzen, 3); assert.notEqual(s.aktiv, 0);
+  // Sieg
+  const v = partie(cfg, { seed: 42, n: 2 });
+  const tv = feld(v, (f) => f.inhalt === 'tier' && f.ring > 1 && f.ring < 7);
+  tv.aufgedeckt = true; tv.tier = 'tiger';
+  const vv = nachbar(v, tv.key, (f) => !f.tier && f.inhalt !== 'tier' && f.inhalt !== 'spezial');
+  v.felder[vv].aufgedeckt = true; v.felder[vv].inhalt = 'leer';
+  const q = bereit(v, 0); q.feld = vv;
+  const vorher = v.tierBeutel.length;
+  ausfuehren(v, { typ: 'bewegen', feld: tv.key });
+  v.testWuerfe = [6];
+  ausfuehren(v, { typ: 'kaempfen' });
+  assert.equal(v.felder[tv.key].tier, null);
+  assert.equal(v.tierBeutel.length, vorher + 1, 'Tier zurück in den Beutel');
+});
+
+test('Rauchbombe: bei Niederlage gefragt, Feld frei wählbar, 0 Schaden, 1 Energie, nach dem Tierkampf geht der Zug weiter', async () => {
+  const cfg = await standardLaden();
+  const s = partie(cfg, { seed: 43, n: 2 });
+  const t = feld(s, (f) => f.inhalt === 'tier' && f.ring > 1 && f.ring < 7);
+  t.aufgedeckt = true; t.tier = 'baer';
+  for (const k of nachbarn(t.coord).map(schluessel)) if (s.felder[k]) { s.felder[k].aufgedeckt = true; s.felder[k].tier = null; s.felder[k].inhalt = 'leer'; }
+  const von = nachbar(s, t.key);
+  const p = bereit(s, 0); p.feld = von; p.energie = 6; p.karten.push('rauchbombe');
+  ausfuehren(s, { typ: 'bewegen', feld: t.key });
+  s.testWuerfe = [1];
+  ausfuehren(s, { typ: 'kaempfen' });
+  assert.equal(s.zug.phase, 'rauch');
+  const wahl = erlaubteAktionen(s).filter((a) => a.feld);
+  assert.ok(wahl.length >= 2, 'mehrere Felder zur Wahl');
+  assert.ok(hat(s, { typ: 'rauch', feld: null }), 'man kann auch verzichten');
+  const ziel = wahl.find((a) => a.feld !== von).feld;
+  ausfuehren(s, { typ: 'rauch', feld: ziel });
+  assert.equal(p.feld, ziel, 'gewähltes Feld');
+  assert.equal(p.herzen, 5, '0 Schaden'); assert.equal(p.energie, 4, '−1 Schritt, −1 Rauch');
+  assert.equal(s.aktiv, 0, 'der Zug geht weiter'); assert.equal(s.zug.phase, 'bewegung');
+  assert.ok(!p.karten.includes('rauchbombe'));
+  assert.equal(s.felder[t.key].tier, 'baer', 'das Tier bleibt liegen');
+  // Verzicht: normale Niederlage
+  const u = partie(cfg, { seed: 43, n: 2 });
+  const tu = feld(u, (f) => f.inhalt === 'tier' && f.ring > 1 && f.ring < 7);
+  tu.aufgedeckt = true; tu.tier = 'baer';
+  for (const k of nachbarn(tu.coord).map(schluessel)) if (u.felder[k]) { u.felder[k].aufgedeckt = true; u.felder[k].tier = null; u.felder[k].inhalt = 'leer'; }
+  const q = bereit(u, 0); q.feld = nachbar(u, tu.key); q.karten.push('rauchbombe');
+  ausfuehren(u, { typ: 'bewegen', feld: tu.key });
+  u.testWuerfe = [1];
+  ausfuehren(u, { typ: 'kaempfen' });
+  ausfuehren(u, { typ: 'rauch', feld: null });
+  assert.equal(q.herzen, 3); assert.ok(q.karten.includes('rauchbombe')); assert.notEqual(u.aktiv, 0);
+});
+
+test('Rauchbombe im Duell: die verlierende Person entscheidet, 0 Schaden, keine Beute, der Zug des Angreifers endet', async () => {
+  const s = partie(await standardLaden(), { seed: 44, modus: 'pvp', n: 2 });
+  const p = bereit(s, 0), q = s.spieler[1];
+  q.feld = p.feld; q.kompass = true; q.karten.push('rauchbombe'); q.energie = 3;
+  for (const k of nachbarn(s.felder[p.feld].coord).map(schluessel)) if (s.felder[k]) { s.felder[k].aufgedeckt = true; s.felder[k].tier = null; s.felder[k].inhalt = 'leer'; }
+  s.testWuerfe = [6, 1];
+  ausfuehren(s, { typ: 'angreifen', ziel: 1 });
+  assert.equal(s.zug.phase, 'rauch');
+  assert.equal(entscheider(s), 1, 'die Verteidigerin entscheidet');
+  const f = erlaubteAktionen(s).find((a) => a.feld).feld;
+  ausfuehren(s, { typ: 'rauch', feld: f });
+  assert.equal(q.feld, f); assert.equal(q.herzen, 5); assert.equal(q.kompass, true, 'keine Beute');
+  assert.equal(q.energie, 2);
+  assert.notEqual(s.aktiv, 0, 'Zug des Angreifers zu Ende');
 });

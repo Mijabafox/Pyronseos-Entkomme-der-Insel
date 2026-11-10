@@ -17,7 +17,7 @@ export function rezeptWirkung(cfg, id) {
     case 'holzspeer': case 'steinmachete': return `Waffe: +${r.kampf ?? 0} im Kampf (Tier und Duell)`;
     case 'bandage': return `Karte: +${cfg.crafting.bandageHerzen} Herzen oder Wiederbelebung (selbes oder Nachbarfeld) mit ${cfg.figur.reanimationHerzen} Herzen`;
     case 'lagerfeuer': return `überall baubar, beim Bau +${cfg.crafting.lagerfeuerHerzen} Herzen; wärmt eigenes Feld und Nachbarfelder (Mücken, Frost); auf dem Strandring Teil der Signalfeuer-Kette`;
-    case 'shelter': return `Rasten +${cfg.zug.rastenShelter} Energie, Schutz vor Kälte und Asche, gilt für alle auf dem Feld`;
+    case 'shelter': return `wie die Wasserquelle: im Zug auf dem Shelterfeld +${cfg.zug.rastenShelter} Energie holen, danach endet der Zug; Schutz vor Kälte und Asche, für alle auf dem Feld`;
     default: return REZEPT[id]?.wirkung ?? '';
   }
 }

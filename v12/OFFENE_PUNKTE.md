@@ -13,6 +13,9 @@ Diese Punkte sind im Regelwerk vom 05.11.2026 nicht ausdrücklich entschieden. D
 | 7 | Felsrutsch mit mehreren Waffen | Die schwächste Waffe geht verloren. | – |
 | 8 | Floss-Marker | Werden nicht gezählt, ein gebautes Floss beendet die Partie. | – |
 | 9 | Koop-Bots und Floss | Die Bots wählen im Koop fast immer die Feuerkette, das Floss praktisch nie. Allein gespielt ist das Wrack im Koop am erfolgreichsten. Playtest nötig. | Simulation |
-| 10 | Wirkung «+1 Energie pro Tag» | Im A/B-Vergleich (Koop 3) hebt sie die Siegquote von 21 % auf 55 %. Grösster Einzelhebel der neuen Regeln. | `energieProTag` |
+| 10 | Wirkung «+1 Energie pro Tag» | Im A/B-Vergleich (Koop 3) hebt sie die Siegquote von 19 % auf 54 %. Grösster Einzelhebel der neuen Regeln. | `energieProTag` |
+| 11 | Rauchbombe im Duell | Auch wenn der Angreifer sie einsetzt, endet sein Zug (nach jedem Duell endet der Zug). | – |
+| 12 | Sicheres Nachbarfeld (Rauchbombe) | Aufgedeckt, ohne Tier, ohne Spezialfeld. | – |
+| 13 | Ausweichen mit der Rauchbombe | Das Tier bleibt liegen, auch ein kleines. | – |
 
 Messung und Begründungen: siehe `CHANGELOG.md`, Abschnitt 6.

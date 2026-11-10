@@ -199,7 +199,7 @@ export function neuerZug(s) {
     schritte: 0, laeuferRest: c.charaktere.laeufer.aktiv ? c.charaktere.laeufer.zusatzfelder : 0, gratisSchritte: 0,
     kampfPlus: 0, abbauFaktor: 1, neuWurf: false, messerDuell: false, kampfSieg: false, nachAufdecken: 'bewegung',
     handel: 0, kampf: null, angriffe: 0, duellGemacht: false, beute: null, wahl: null, nachher: [], zugEndeNach: false,
-    getrunken: false, notFlossVersucht: false, letztesErgebnis: null, aufdeckenQuelle: null, abgebaut: false, radiusVorher: null,
+    getrunken: false, notFlossVersucht: false, rauch: null, letztesErgebnis: null, aufdeckenQuelle: null, abgebaut: false, radiusVorher: null,
   };
 }
 
@@ -281,8 +281,24 @@ function tagesTick(s) {
 }
 
 function rastenWert(s) {
-  if (feldVon(s, s.aktiv).bau?.art === 'shelter') return s.cfg.zug.rastenShelter;
   return tagesMods(s).rastenWert ?? s.cfg.zug.rasten;
+}
+
+// Shelter (V12, 10.11.2026): wie die Wasserquelle – im Zug auf dem Shelterfeld +4 Energie holen, danach endet der Zug.
+export function shelterGrund(s) {
+  const p = aktiv(s);
+  if (!imSpiel(p)) return 'nicht im Spiel';
+  if (!inZug(s)) return 'nicht in dieser Phase';
+  if (feldVon(s, s.aktiv).bau?.art !== 'shelter') return 'kein Shelter auf diesem Feld';
+  if (p.energie >= energieMax(s)) return 'Energie ist schon voll';
+  return null;
+}
+function shelterErholen(s) {
+  const p = aktiv(s);
+  const plus = energieAendern(s, s.aktiv, s.cfg.zug.rastenShelter);
+  zaehle(s, 'shelterErholt');
+  log(s, `erholt sich im Shelter: +${plus} Energie (jetzt ${p.energie})${s.cfg.zug.shelterZugende ? ' – der Zug endet' : ''}`);
+  if (s.cfg.zug.shelterZugende) zugBeenden(s);
 }
 
 function zugBeenden(s) {
@@ -681,6 +697,7 @@ function aktionsListe(s) {
   for (const r of Object.keys(s.cfg.crafting.rezepte)) if (craftGrund(s, r) === null) a.push({ typ: 'craften', rezept: r });
   if (kannEssen(s)) a.push({ typ: 'essen' });
   if (trinkenGrund(s) === null) a.push({ typ: 'trinken' });
+  if (shelterGrund(s) === null) a.push({ typ: 'shelterErholen' });
   for (const z of reanimierZiele(s)) a.push({ typ: 'reanimieren', ziel: z });
   for (const f of sammelfeldZiele(s)) a.push({ typ: 'sammelfeld', feld: f });
   for (const art of ['solide', 'not']) if (flossGrund(s, art) === null) a.push({ typ: 'flossBauen', art });
@@ -701,6 +718,7 @@ export function erlaubteAktionen(s) {
     case 'kampf': return [{ typ: 'kaempfen' }, ...fluchtZiele(s).map((f) => ({ typ: 'fliehen', feld: f })), ...jokerOptionen(s)];
     case 'wahl': return z.wahl.optionen.map((o) => ({ typ: 'wahl', index: o.index }));
     case 'beute': return beuteKategorien(s, z.beute.von).map((w) => ({ typ: 'beute', wahl: w }));
+    case 'rauch': return [...z.rauch.ziele.map((f) => ({ typ: 'rauch', feld: f })), { typ: 'rauch', feld: null }];
     default: return [];
   }
 }
@@ -713,6 +731,7 @@ export function istErlaubt(s, a) {
 
 // Wer muss jetzt entscheiden? (Beute: der Sieger, sonst die aktive Figur)
 export function entscheider(s) {
+  if (s.zug.phase === 'rauch' && s.zug.rauch) return s.zug.rauch.wer;
   return s.zug.phase === 'beute' && s.zug.beute ? s.zug.beute.sieger : s.aktiv;
 }
 
@@ -745,6 +764,8 @@ export function ausfuehren(s, a) {
     case 'fliehen': fliehen(s, a.feld); break;
     case 'wahl': wahlTreffen(s, a.index); break;
     case 'beute': beuteNehmen(s, a.wahl); break;
+    case 'rauch': rauchEntscheiden(s, a.feld); break;
+    case 'shelterErholen': shelterErholen(s); break;
     case 'zugBeenden': zugBeenden(s); break;
   }
   nachAktion(s, wer);
@@ -1135,46 +1156,102 @@ function kampfGewonnen(s, text) {
   const n = rohstoffGeben(s, s.aktiv, 'nahrung', istGross(s, k.tier) ? t.nahrungGross : t.nahrungKlein);
   p.feld = k.feld;
   if (!k.hinterhalt) { const f = s.felder[k.feld]; f.tier = null; f.inhalt = 'leer'; }
-  s.tierAblage.push(k.tier);
+  tierZurueck(s, k.tier);
   zaehle(s, 'kaempfeGewonnen');
   log(s, `${text.startsWith('kämpft') ? `${text} → Sieg` : `besiegt ${tierName(k.tier)} ${text}`}: +${n} Nahrung`);
   kampfEnde(s);
 }
 
+// Tier zurück in den Beutel (gemischt).
+function tierZurueck(s, tier) {
+  if (s.cfg.tiere.siegZurueckInBeutel === false) { s.tierAblage.push(tier); return; }
+  s.tierBeutel = mischen(s, 'tier', [...s.tierBeutel, tier]);
+}
+
 function kampfVerloren(s, text) {
-  const k = s.zug.kampf, p = aktiv(s), t = s.cfg.tiere;
+  const k = s.zug.kampf;
   s.statistik.kaempfeVerloren += 1;
-  if (k.hinterhalt) s.tierBeutel.unshift(k.tier);
-  const zurueck = !k.hinterhalt && !k.steht && t.zuruecksetzen;
-  if (zurueck) { p.feld = k.von; s.statistik.zurueckgesetzt += 1; }
-  const wo = k.hinterhalt || k.steht ? 'bleibt auf seinem Feld' : zurueck ? `zurück auf ${feldText(s, k.von)}` : 'bleibt beim Tier';
+  log(s, `${text} → verloren gegen ${tierName(k.tier)}`);
+  // Rauchbombe: Wer sie hat, wird gefragt (0 Schaden, Feld wählen, der Zug geht weiter).
+  const ziele = rauchZiele(s, s.aktiv, k.feld);
+  if (ziele.length) {
+    s.zug.rauch = { art: 'tier', wer: s.aktiv, ziele, kampf: { ...k } };
+    s.zug.phase = 'rauch';
+    return;
+  }
+  kampfNiederlage(s, k);
+}
+
+// Niederlage im Tierkampf (V12, 10.11.2026):
+//  gross: zurück aufs vorherige Feld, Tier bleibt liegen, Schaden, Zug endet.
+//  klein: das Tier verschwindet (zurück in den Beutel), die Figur bleibt auf dem Feld stehen, Schaden, Zug endet.
+//  Hinterhalt: die Figur bleibt stehen, das Tier geht zurück in den Beutel.
+function kampfNiederlage(s, k) {
+  const p = aktiv(s), t = s.cfg.tiere;
   const gross = istGross(s, k.tier);
+  let wo;
+  if (k.hinterhalt) { tierZurueck(s, k.tier); wo = 'bleibt auf seinem Feld'; }
+  else if (!gross && t.kleinVerschwindet) {
+    const f = s.felder[k.feld];
+    f.tier = null; f.inhalt = 'leer';
+    tierZurueck(s, k.tier);
+    p.feld = k.feld;
+    wo = `${tierName(k.tier)} verschwindet, die Figur bleibt auf dem Feld`;
+  } else if (!k.steht && t.zuruecksetzen) {
+    p.feld = k.von; s.statistik.zurueckgesetzt += 1;
+    wo = `zurück auf ${feldText(s, k.von)}, das Tier bleibt liegen`;
+  } else wo = 'bleibt beim Tier';
+  s.zug.kampf = k; // für kampfEnde
   kampfEnde(s);
-  const n = t.schaden[k.tier] ?? (gross ? 2 : 1);
   s.zug.phase = 'bewegung';
-  log(s, `${text} → verloren gegen ${tierName(k.tier)} – ${wo}, der Zug endet`);
-  if (n > 0 && !rauchSpielen(s, s.aktiv, k.feld, k.von)) schaden(s, s.aktiv, n, tierName(k.tier));
+  log(s, `${wo} – der Zug endet`);
+  const n = t.schaden[k.tier] ?? (gross ? 2 : 1);
+  if (n > 0) schaden(s, s.aktiv, n, tierName(k.tier));
   if (imSpiel(aktiv(s))) zugBeenden(s);
 }
 
-function rauchSpielen(s, i, feld, bevorzugt = null) {
+const rauchKosten = (s) => (s.cfg.spezialkarten.karten.rauchbombe?.effekte ?? []).find((e) => e.typ === 'rauch')?.energie ?? 1;
+// Sichere Nachbarfelder für die Rauchbombe: aufgedeckt, ohne Tier, ohne Spezialfeld (leer = 0 Energie nicht einsetzbar).
+export function rauchZiele(s, i, feld) {
   const p = s.spieler[i];
-  const def = s.cfg.spezialkarten.karten.rauchbombe;
-  const kosten = (def?.effekte ?? []).find((e) => e.typ === 'rauch')?.energie ?? 1;
-  if (!p.karten.includes('rauchbombe') || p.energie < kosten) return false;
-  const sicher = (k) => s.felder[k] && !s.felder[k].tier;
-  const ziel = bevorzugt && bevorzugt !== feld && sicher(bevorzugt) ? bevorzugt : nachbarn(s.felder[feld].coord).map(schluessel).find(sicher);
-  if (!ziel) return false;
-  karteAblegen(s, i, 'rauchbombe');
-  p.feld = ziel; p.energie -= kosten;
-  kartenEreignis(s, 'gespielt', 'rauchbombe', i, `0 Schaden, weicht 1 Feld aus (−${kosten} Energie)`);
-  log(s, `💨 Rauch: kein Schaden, weicht auf ein sicheres Nachbarfeld aus (−${kosten} Energie)`, i);
-  return true;
+  if (!p.karten.includes('rauchbombe') || p.energie < rauchKosten(s) || !imSpiel(p)) return [];
+  return nachbarn(s.felder[feld].coord).map(schluessel).filter((k) => {
+    const f = s.felder[k];
+    return f && f.aufgedeckt && !f.tier && f.inhalt !== 'spezial' && f.inhalt !== 'tier';
+  });
+}
+
+function rauchEntscheiden(s, feld) {
+  const r = s.zug.rauch;
+  s.zug.rauch = null;
+  const p = s.spieler[r.wer];
+  if (feld) {
+    const kosten = rauchKosten(s);
+    karteAblegen(s, r.wer, 'rauchbombe');
+    p.feld = feld; p.energie -= kosten;
+    zaehle(s, 'rauchGespielt');
+    kartenEreignis(s, 'gespielt', 'rauchbombe', r.wer, `0 Schaden, weicht auf ${feldText(s, feld)} aus (−${kosten} Energie)`);
+    log(s, `💨 Rauchbombe: kein Schaden, weicht auf ${feldText(s, feld)} aus (−${kosten} Energie)`, r.wer);
+  }
+  if (r.art === 'tier') {
+    if (!feld) { kampfNiederlage(s, r.kampf); return; }
+    // Ausgewichen: kein Schaden, das Tier bleibt liegen (Hinterhalt: zurück in den Beutel), der Zug geht weiter.
+    if (r.kampf.hinterhalt) tierZurueck(s, r.kampf.tier);
+    s.zug.kampf = r.kampf;
+    kampfEnde(s);
+    s.zug.phase = 'bewegung';
+    log(s, 'der Zug geht weiter');
+    return;
+  }
+  // Duell
+  s.zug.phase = r.zurueck;
+  if (feld) return; // 0 Schaden, keine Beute
+  duellNiederlage(s, r.sieger, r.verlierer, r.fern, r.zurueck);
 }
 
 function fliehen(s, ziel) {
   const k = s.zug.kampf;
-  if (k.hinterhalt) s.tierBeutel.unshift(k.tier);
+  if (k.hinterhalt) tierZurueck(s, k.tier);
   energieAendern(s, s.aktiv, -s.cfg.tiere.fluchtEnergie);
   kampfEnde(s);
   s.zug.schritte += 1;
@@ -1204,6 +1281,7 @@ function angreifen(s, ziel) {
   s.statistik.duelle += 1;
   const text = `greift ${v.name} an`;
   s.zug.duellFern = false;
+  if (s.cfg.duelle.zugende) s.zug.zugEndeNach = true; // V12: nach einem Duell endet der Zug
   if (messerImDuell(s, ziel, text) !== false) return;
   const ba = waffenBonus(s, p) + s.zug.kampfPlus, bv = waffenBonus(s, v);
   let wa = wurf(s, 6, `Angriff auf ${v.name}`);
@@ -1222,6 +1300,7 @@ function fernDuell(s, ziel) {
   kartenEreignis(s, 'gespielt', 'duell', s.aktiv, `Duell gegen ${v.name}`);
   const text = `⚔️ fordert ${v.name} zum Fern-Duell`;
   s.zug.duellFern = true;
+  if (s.cfg.duelle.zugende) s.zug.zugEndeNach = true; // V12: nach einem Duell endet der Zug
   if (messerImDuell(s, ziel, text) !== false) return;
   const wa = wurf(s, 6, `Duell gegen ${v.name}`), wv = wurf(s, 6, `${v.name} im Duell`, ziel);
   duellErgebnis(s, ziel, wa, wv, `${text}: Wurf ${wa} gegen Wurf ${wv}`);
@@ -1234,16 +1313,26 @@ function duellErgebnis(s, gegnerIdx, a, b, text) {
   const verlierer = sieg ? gegnerIdx : s.aktiv;
   const sieger = sieg ? s.aktiv : gegnerIdx;
   zaehle(s, sieg ? 'duelleGewonnen' : 'duelleVerloren');
-  if (rauchSpielen(s, verlierer, s.spieler[verlierer].feld)) return true;
   const fern = !!s.zug.duellFern;
-  if (beuteKategorien(s, verlierer, fern).length > 0) {
-    s.zug.beute = { sieger, von: verlierer, zurueck: s.zug.phase === 'aktion' ? 'aktion' : 'bewegung', fern };
-    s.zug.phase = 'beute';
+  const zurueck = s.zug.phase === 'aktion' ? 'aktion' : 'bewegung';
+  const ziele = rauchZiele(s, verlierer, s.spieler[verlierer].feld);
+  if (ziele.length) {
+    s.zug.rauch = { art: 'duell', wer: verlierer, ziele, sieger, verlierer, fern, zurueck };
+    s.zug.phase = 'rauch';
     return true;
+  }
+  duellNiederlage(s, sieger, verlierer, fern, zurueck);
+  return true;
+}
+
+function duellNiederlage(s, sieger, verlierer, fern, zurueck) {
+  if (beuteKategorien(s, verlierer, fern).length > 0) {
+    s.zug.beute = { sieger, von: verlierer, zurueck, fern };
+    s.zug.phase = 'beute';
+    return;
   }
   log(s, `${s.spieler[verlierer].name} hat nichts, was man nehmen könnte`);
   schaden(s, verlierer, s.cfg.duelle.herzen, 'Duell verloren');
-  return true;
 }
 
 function beuteNehmen(s, wahl) {

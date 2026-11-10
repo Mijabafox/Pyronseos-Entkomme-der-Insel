@@ -7,7 +7,7 @@ import { klon, ROHSTOFFE, rohstoffText } from '../engine/config.js';
 import {
   erlaubteAktionen, entscheider, craftGrund, flossGrund, wrackGrund, trinkenGrund, feuerZaehlt, ketteInfo, routenBesitzer,
   zielStrand, flossKosten, wrackKosten, kasseGesamt, kasseAufFeld, handelPartner, rezeptKosten, kampfBonus, tierZiel, siegChance,
-  beuteKategorien, MODUS_NAME, TEAM_NAMEN, kompassBesitzer, koopFeuerFehlende,
+  beuteKategorien, MODUS_NAME, TEAM_NAMEN, kompassBesitzer, koopFeuerFehlende, shelterGrund,
 } from '../engine/engine.js';
 import { gruppe, herzenMax, fliehende, istGross, gruppenSchluessel } from '../engine/kern.js';
 import { sicht } from '../engine/sicht.js';
@@ -113,8 +113,8 @@ class Partie extends TischAnsicht {
     // Mensch: bei mehreren Menschen in Team/PvP erst übergeben
     const w = entscheider(s);
     const menschen = this.sitze.filter((x) => !x.ki).length;
-    if (menschen > 1 && s.modus !== 'koop' && this.uebergabeFuer !== `${s.tag}:${w}:${s.zug.phase === 'beute'}`) {
-      this.uebergabeFuer = `${s.tag}:${w}:${s.zug.phase === 'beute'}`;
+    if (menschen > 1 && s.modus !== 'koop' && this.uebergabeFuer !== `${s.tag}:${w}:${s.zug.phase === 'beute' || s.zug.phase === 'rauch'}`) {
+      this.uebergabeFuer = `${s.tag}:${w}:${s.zug.phase === 'beute' || s.zug.phase === 'rauch'}`;
       this.uebergabeDialog(w);
     }
     this.letzterMensch = w;
@@ -236,7 +236,7 @@ class Partie extends TischAnsicht {
     const s = this.sl.s;
     if (s.ende || this.sitze[entscheider(s)]?.ki) return new Map();
     const m = new Map();
-    for (const a of erlaubteAktionen(s)) if (['bewegen', 'aufdecken', 'fliehen'].includes(a.typ)) m.set(a.feld, a);
+    for (const a of erlaubteAktionen(s)) if (['bewegen', 'aufdecken', 'fliehen', 'rauch'].includes(a.typ) && a.feld) m.set(a.feld, a);
     return m;
   }
 
@@ -363,13 +363,18 @@ class Partie extends TischAnsicht {
         break;
       }
       case 'wahl': teile.push(`<div><b>${esc(z.wahl.quelle)}</b>: wähle</div>`, `<div class="knopf-reihe">${z.wahl.optionen.map((o) => knopf({ typ: 'wahl', index: o.index }, esc(o.name))).join('')}</div>`); break;
+      case 'rauch': {
+        const r = z.rauch;
+        teile.push(`<div><b>💨 Verloren!</b> Du hast eine Rauchbombe: 0 Schaden${r.art === 'duell' ? ', keine Beute' : ''}. Klicke ein markiertes sicheres Nachbarfeld an (${rauchEnergie(s)} Energie)${r.art === 'tier' ? ', danach geht dein Zug weiter' : ''}.</div>`, `<div class="knopf-reihe">${knopf({ typ: 'rauch', feld: null }, 'Rauchbombe nicht einsetzen')}</div>`);
+        break;
+      }
       case 'beute': teile.push(`<div><b>Duell gewonnen!</b> Genau eins – wähle die Beute von ${esc(s.spieler[z.beute.von].name)}:</div>`, `<div class="knopf-reihe">${beuteKategorien(s, z.beute.von).map((w) => knopf({ typ: 'beute', wahl: w }, { karte: '🂠 1 Handkarte blind ziehen', kompass: '🧭 Kompasskarte nehmen' }[w], true)).join('')}</div>`); break;
       default: {
-        teile.push('<div class="hinweis">Feld auf dem Brett anklicken = gehen. Abbau und Kompass bergen beenden die Bewegung. Trinken beendet den Zug.</div>');
-        teile.push(`<div class="knopf-reihe">${knopf({ typ: 'abbauen' }, '⛏ Abbauen')}${knopf({ typ: 'trinken' }, '💧 Trinken (Zugende)', false, trinkenGrund(s) === 'kein Wasserfeld' ? null : trinkenGrund(s))}${knopf({ typ: 'essen' }, '🍖 Essen')}${knopf({ typ: 'kompassBergen' }, `🧭 Kompass bergen (${s.cfg.zug.kompassEnergie} Energie)`, true)}${knopf({ typ: 'bandage' }, `🩹 Bandage benutzen (+${s.cfg.crafting.bandageHerzen} Herzen)`)}</div>`);
+        teile.push('<div class="hinweis">Feld auf dem Brett anklicken = gehen. Abbau und Kompass bergen beenden die Bewegung. Trinken, Erholen im Shelter und ein Duell beenden den Zug.</div>');
+        teile.push(`<div class="knopf-reihe">${knopf({ typ: 'abbauen' }, '⛏ Abbauen')}${knopf({ typ: 'trinken' }, '💧 Trinken (Zugende)', false, trinkenGrund(s) === 'kein Wasserfeld' ? null : trinkenGrund(s))}${knopf({ typ: 'shelterErholen' }, `⛺ Im Shelter erholen (+${s.cfg.zug.rastenShelter} Energie, Zugende)`, false, shelterGrund(s) === 'kein Shelter auf diesem Feld' ? null : shelterGrund(s))}${knopf({ typ: 'essen' }, '🍖 Essen')}${knopf({ typ: 'kompassBergen' }, `🧭 Kompass bergen (${s.cfg.zug.kompassEnergie} Energie)`, true)}${knopf({ typ: 'bandage' }, `🩹 Bandage benutzen (+${s.cfg.crafting.bandageHerzen} Herzen)`)}</div>`);
         teile.push(`<details class="rezepte"><summary>🛠 Craften</summary><div class="rezept-raster">${Object.keys(s.cfg.crafting.rezepte).filter((r) => s.cfg.crafting.rezepte[r].aktiv).map((r) => knopf({ typ: 'craften', rezept: r }, `${rezeptSymbol(r)} ${rezeptName(r)} <small>${rohstoffText(rezeptKosten(s, p, r))}</small>`, false, craftGrund(s, r))).join('')}</div></details>`);
         teile.push(`<div class="knopf-reihe">${knopf({ typ: 'flossBauen', art: 'solide' }, '🛶 Solides Floss', true, flossGrund(s, 'solide'))}${knopf({ typ: 'flossBauen', art: 'not' }, '🛶 Not-Floss (W6)', false, flossGrund(s, 'not'))}${knopf({ typ: 'wrackReparieren' }, '✈️ Wrack reparieren', true, wrackGrund(s))}</div>`);
-        const extra = ak.filter((a) => ['reanimieren', 'sammelfeld', 'angreifen', 'duell'].includes(a.typ)).map((a) => knopf(a, a.typ === 'reanimieren' ? `🩹 ${esc(s.spieler[a.ziel].name)} wiederbeleben` : a.typ === 'sammelfeld' ? `📍 Sammelfeld Strand ${s.felder[a.feld].kuestenNr}` : a.typ === 'angreifen' ? `⚔️ ${esc(s.spieler[a.ziel].name)} angreifen` : `⚔️ Fern-Duell (Karte) gegen ${esc(s.spieler[a.ziel].name)}`));
+        const extra = ak.filter((a) => ['reanimieren', 'sammelfeld', 'angreifen', 'duell'].includes(a.typ)).map((a) => knopf(a, a.typ === 'reanimieren' ? `🩹 ${esc(s.spieler[a.ziel].name)} wiederbeleben` : a.typ === 'sammelfeld' ? `📍 Sammelfeld Strand ${s.felder[a.feld].kuestenNr}` : a.typ === 'angreifen' ? `⚔️ ${esc(s.spieler[a.ziel].name)} angreifen (Zugende)` : `⚔️ Fern-Duell (Karte) gegen ${esc(s.spieler[a.ziel].name)} (Zugende)`));
         if (extra.length) teile.push(`<div class="knopf-reihe">${extra.join('')}</div>`);
         teile.push(`<div class="knopf-reihe">${handelPartner(s).length ? '<button type="button" id="handelKnopf">🤝 Handeln / Schenken</button>' : ''}${knopf({ typ: 'zugBeenden' }, z.schritte === 0 && !z.abgebaut ? 'Zug beenden (rasten)' : 'Zug beenden', true)}</div>`);
       }
@@ -574,9 +579,11 @@ class Partie extends TischAnsicht {
   }
 }
 
+const rauchEnergie = (s) => (s.cfg.spezialkarten.karten.rauchbombe?.effekte ?? []).find((e) => e.typ === 'rauch')?.energie ?? 1;
+
 export function phaseText(s) {
   const z = s.zug;
-  return { weitsicht_wuerfeln: 'Weitsicht würfeln', weitsicht_waehlen: 'Kacheln aufdecken', bewegung: 'Bewegung und Aktionen', aktion: 'Aktionen (nach dem Abbau)', kampf: `Kampf gegen ${TIER[z.kampf?.tier]?.name ?? 'ein Tier'}`, wahl: 'Wahl treffen', beute: 'Duell-Beute wählen' }[z.phase] ?? z.phase;
+  return { weitsicht_wuerfeln: 'Weitsicht würfeln', weitsicht_waehlen: 'Kacheln aufdecken', bewegung: 'Bewegung und Aktionen', aktion: 'Aktionen (nach dem Abbau)', kampf: `Kampf gegen ${TIER[z.kampf?.tier]?.name ?? 'ein Tier'}`, wahl: 'Wahl treffen', beute: 'Duell-Beute wählen', rauch: 'Rauchbombe: Feld wählen' }[z.phase] ?? z.phase;
 }
 
 // Was ist jetzt zu tun? (Hinweisleiste für Menschen)
@@ -590,6 +597,7 @@ function phaseHilfe(s) {
     kampf: 'kämpfe oder fliehe auf ein markiertes Feld.',
     wahl: 'triff die Wahl im eigenen Panel.',
     beute: 'wähle die Beute im eigenen Panel.',
+    rauch: 'Rauchbombe: klicke ein markiertes Feld an oder setze sie nicht ein.',
   }[z.phase] ?? '';
 }
 

@@ -114,6 +114,7 @@ export class Bot {
     if (!this.cache || this.cacheFuer !== sv) { this.cache = new Map(); this.cacheFuer = sv; }
     const z = sv.zug;
     if (z.phase === 'beute') return { typ: 'beute', wahl: this.beuteWahl(sv, aktionen) };
+    if (z.phase === 'rauch') return this.rauchWahl(sv, aktionen);
     const ziel = this.planen(sv);
     this.ziel = ziel;
     switch (z.phase) {
@@ -544,6 +545,21 @@ export class Bot {
     return optionen[0]?.a ?? aktionen[0];
   }
 
+  // Rauchbombe nach verlorenem Kampf oder Duell: einsetzen, wenn der Schaden weh tut; Feld nahe am Plan.
+  rauchWahl(sv, aktionen) {
+    const r = sv.zug.rauch, p = ich(sv);
+    const felder = aktionen.filter((a) => a.feld);
+    if (!felder.length) return { typ: 'rauch', feld: null };
+    let lohnt;
+    if (r.art === 'tier') {
+      const n = sv.cfg.tiere.schaden[r.kampf.tier] ?? 1;
+      lohnt = n >= 2 || p.herzen <= n + 1 || this.risiko < 0.5;
+    } else lohnt = p.kompass || p.herzen <= 2 || p.karten?.includes('brennsprit') || (p.route !== null && p.route !== undefined);
+    if (!lohnt) return { typ: 'rauch', feld: null };
+    const fokus = this.ziel?.fokus ?? MITTE;
+    return felder.reduce((a, b) => (abstand(sv.felder[b.feld].coord, fokus) < abstand(sv.felder[a.feld].coord, fokus) ? b : a));
+  }
+
   beuteWahl(sv, aktionen) {
     const opt = aktionen.map((a) => a.wahl);
     // V12: genau eins – 1 Handkarte blind oder die verdeckte Kompasskarte (nur im normalen Duell).
@@ -565,9 +581,6 @@ export class Bot {
     // Reanimieren
     const rea = aktionen.find((a) => a.typ === 'reanimieren');
     if (rea) return rea;
-    // Duelle
-    const d = this.duellWahl(sv, aktionen);
-    if (d) return d;
     // Koop: Sammelfeld wählen
     if (sv.modus === 'koop' && routenBesitzer(sv, this.gruppe(sv)) !== null && (!sv.sammelfeld || sv.felder[sv.sammelfeld].tier)) {
       const sf = this.sammelfeld(sv);
@@ -612,7 +625,11 @@ export class Bot {
     // Handel / Schenken
     const h = this.handelWahl(sv);
     if (h) return h;
-    // Trinken als letzte Aktion
+    // Duell zuletzt (V12: danach endet der Zug)
+    const d = this.duellWahl(sv, aktionen);
+    if (d) return d;
+    // Trinken oder Shelter als letzte Aktion (beide beenden den Zug)
+    if (hat({ typ: 'shelterErholen' }) && p.energie <= sv.cfg.figur.energie - sv.cfg.zug.rastenShelter + 1 && (this.trinkenSinnvoll(sv, ziel) || !hat({ typ: 'trinken' }))) return { typ: 'shelterErholen' };
     if (hat({ typ: 'trinken' }) && this.trinkenSinnvoll(sv, ziel)) return { typ: 'trinken' };
     if (hat({ typ: 'essen' }) && p.energie <= 1 && this.nahrungUebrig(sv) > 0 && z.schritte > 0) return { typ: 'essen' };
     return { typ: 'zugBeenden' };

@@ -17,7 +17,7 @@ const NAMEN = {
   regel: 'Startfeld-Regel', tierfeldErlaubt: 'Startfeld darf Tier/Spezial sein', aktiv: 'aktiv', kampf: 'Kampfbonus',
   kacheln: 'Zusatzkacheln Weitsicht', zusatzfelder: 'Zusatzfelder bei 0 Energie', wuerfel: 'Würfel (Seiten)', schwelle: 'Schwelle', bonus: 'Bonus',
   radius: 'Radius', schrittEnergie: 'Energie pro Schritt', abbauEnergie: 'Energie pro Abbau', werkzeug: 'Werkzeug',
-  rasten: 'Rasten (Energie)', rastenShelter: 'Rasten im Shelter', nahrungEnergie: 'Nahrung gibt Energie',
+  rasten: 'Rasten (Energie)', rastenShelter: 'Shelter: Energie beim Erholen', nahrungEnergie: 'Nahrung gibt Energie',
   auffuellen: 'Wasser füllt auf bis', zugende: 'Trinken beendet den Zug', durchlaufen: 'Wasserfeld durchlaufen erlaubt',
   proZug: 'pro Zug', maxKarten: 'höchstens Karten pro Seite', kompassEnergie: 'Kompass bergen kostet Energie',
   zielKlein: 'Zielwert kleines Tier', zielGross: 'Zielwert grosses Tier', nahrungKlein: 'Nahrung kleines Tier', nahrungGross: 'Nahrung grosses Tier',
@@ -43,6 +43,8 @@ const NAMEN = {
   schaden: 'Schaden', nachLandGratisNurKoop: 'Floss bleibt nur im Koop liegen', koopAlleAufFeuer: 'Koop: alle auf ein Feuerfeld der Kette',
   limitProTyp: 'Höchstens 1 Werkzeug/Waffe pro Typ', offen: 'Werkzeuge und Waffen offen', karte: 'Beute: 1 Handkarte blind', kompass: 'Beute: Kompasskarte',
   fernKompass: 'Fern-Duell: Kompass raubbar', brennspritOben: 'Brennsprit unter den obersten Karten', holzspeer: 'Holzspeer', steinmachete: 'Stein-Machete',
+  shelterZugende: 'Shelter: Erholen beendet den Zug', kleinVerschwindet: 'Kleines Tier verschwindet bei Niederlage',
+  siegZurueckInBeutel: 'Besiegtes Tier zurück in den Beutel',
   bandage: 'Pflanzenbandage', lagerfeuer: 'Lagerfeuer', shelter: 'Shelter', floss: 'Floss', ausruestung: 'Ausrüstung sichtbar für', marker: 'Bau-Marker',
 };
 
@@ -88,6 +90,7 @@ function name(pfad) {
   const teile = pfad.split('.');
   const letzter = teile.at(-1);
   if (/^\d+$/.test(letzter)) return `${letzter} Personen`;
+  if (pfad === 'duelle.zugende') return 'Nach einem Duell endet der Zug';
   let n = NAMEN[letzter] ?? letzter;
   const vor = teile.at(-2);
   if (/^\d+$/.test(vor)) n = `${vor} Personen: ${n}`;

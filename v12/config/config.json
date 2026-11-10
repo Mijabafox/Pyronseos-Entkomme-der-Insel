@@ -160,7 +160,8 @@
     "kompassBeendetZug": false,
     "energieProTag": 1,
     "rastenOhneAbbau": true,
-    "spezialAusDerFerne": true
+    "spezialAusDerFerne": true,
+    "shelterZugende": true
   },
   "tiere": {
     "klein": {
@@ -191,7 +192,9 @@
     },
     "zuruecksetzen": true,
     "fluchtEnergie": 1,
-    "flucht": false
+    "flucht": false,
+    "kleinVerschwindet": true,
+    "siegZurueckInBeutel": true
   },
   "crafting": {
     "lagerfeuerHerzen": 2,
@@ -403,7 +406,8 @@
       "kompass": true
     },
     "routeBeiAusscheiden": "zurueckZumKompass",
-    "fernKompass": false
+    "fernKompass": false,
+    "zugende": true
   },
   "sichtbarkeit": {
     "koop": {
@@ -679,7 +683,7 @@
         "symbol": "💨",
         "bild": "rauch",
         "art": "joker",
-        "text": "Bei Angriff (Tier oder Duell): 0 Schaden und 1 Feld auf ein sicheres Feld ausweichen. Kostet 1 Energie.",
+        "text": "Bei verlorenem Tierkampf oder Duell: 0 Schaden, du wählst ein sicheres Nachbarfeld (1 Energie, bei 0 Energie nicht einsetzbar). Nach einem Tierkampf geht dein Zug weiter.",
         "flavor": "Puff – und weg.",
         "reaktiv": "niederlage",
         "ausspielen": [],

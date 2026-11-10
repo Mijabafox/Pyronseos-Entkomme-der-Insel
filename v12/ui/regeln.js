@@ -27,6 +27,7 @@ export function regelnZeigen(el) {
     return `<span class="abweichung" title="Standard (Regelstand 05.11.2026): ${esc(st)}">${esc(t)}</span>`;
   };
   const fw = c.fluchtwege, z = c.zug, t = c.tiere, d = c.duelle;
+  const rauchEnergie = (c.spezialkarten.karten.rauchbombe?.effekte ?? []).find((e) => e.typ === 'rauch')?.energie ?? 1;
   const personen = [1, 2, 3, 4];
   const fluchtZeilen = personen.map((n) => {
     const f = fw.feuer.tabelle[n];
@@ -131,7 +132,8 @@ export function regelnZeigen(el) {
     <h3>Phase 3 · Abbauen oder Rasten</h3>
     <ul>
       <li>Abbauen: ${z.abbauEnergie ? `${w('zug.abbauEnergie')} Energie` : '0 Energie'}, beendet die Bewegung, Phase 4 bleibt möglich. Das Plättchen wird entfernt. Baum: ${rohstoffText(z.ertrag.baum.basis)} (Steinaxt: 3 Holz + 1 Blatt) · Fels: ${rohstoffText(z.ertrag.fels.basis)} (Spitzhacke: 3 Stein) · Blätterbusch: ${rohstoffText(z.ertrag.blaetterbusch.basis)} · Strandgut: ${rohstoffText(z.ertrag.strandgut.basis)}.</li>
-      <li>Rasten: Wer sich im ganzen Zug nicht bewegt und nichts abgebaut hat, bekommt +${w('zug.rasten')} Energie. Im Shelter +${w('zug.rastenShelter')} (gilt für alle auf dem Feld).</li>
+      <li>Rasten: Wer sich im ganzen Zug nicht bewegt und nichts abgebaut hat, bekommt +${w('zug.rasten')} Energie. Im Shelter gibt es stattdessen mehr, siehe unten.</li>
+      <li><span class="neu-v12">neu 10.11.</span> <b>Shelter wie die Wasserquelle:</b> Wer im Zug auf einem Shelterfeld steht (auch nach der Bewegung), kann sich erholen: +${w('zug.rastenShelter')} Energie (höchstens ${w('figur.energie')}), danach endet der Zug. Das gilt für alle Figuren, die auf dem Feld stehen.</li>
     </ul>
     <h3>Phase 4 · Aktionen (beliebige Reihenfolge)</h3>
     <ul>
@@ -140,7 +142,7 @@ export function regelnZeigen(el) {
       <li>Pflanzenbandage: +${w('crafting.bandageHerzen')} Herzen oder Wiederbelebung.</li>
       <li>Handkarten ausspielen.</li>
       <li>Handel: ${w('zug.handel.proZug')}× pro Zug mit einer Person im Umkreis ${w('zug.handel.radius')}, höchstens ${w('zug.handel.maxKarten')} Karten pro Seite. Im Kooperativ-Modus auch verschenken. <span class="annahme">Annahme</span> Im Prototyp sind Rohstoffe, der Brennsprit und die Routenkarte tauschbar, die Kompasskarte nicht.</li>
-      <li>Duell (nur Team und Jeder gegen jeden), siehe unten.</li>
+      <li>Duell (nur Team und Jeder gegen jeden), siehe unten. <span class="neu-v12">neu 10.11.</span> Nach einem Duell endet der Zug.</li>
     </ul>
   </section>
 
@@ -150,6 +152,7 @@ export function regelnZeigen(el) {
       <li>Beide werfen W6 + Waffe. Der höhere Wert gewinnt, Gleichstand = nichts. <span class="annahme">Annahme</span> Im Kampf und im Duell zählt nur die beste Waffe, Speer und Machete addieren sich nicht.</li>
       <li>Der Verlierer verliert ${w('duelle.herzen')} Herz. Der Sieger nimmt genau eins: 1 Handkarte blind (das kann die Routenkarte sein) <b>oder</b> die verdeckte Kompasskarte, falls der Verlierer sie hat.</li>
       <li><span class="neu-v12">neu</span> Die Kompasskarte kann nur bei einem verlorenen <b>normalen</b> Duell geraubt werden, nicht beim Fern-Duell (Karte «Duell-Herausforderung»).</li>
+      <li><span class="neu-v12">neu 10.11.</span> <b>Nach einem Duell endet der Zug</b>, egal wie es ausgeht (auch bei Gleichstand). Das gilt für das normale Duell und für das Fern-Duell.</li>
     </ul>
   </section>` : ''}
 
@@ -159,7 +162,10 @@ export function regelnZeigen(el) {
       <li>Klein (Zielwert ${w('tiere.zielKlein')}): Sieg ${w('tiere.nahrungKlein')} Nahrung, Niederlage −${w('tiere.schaden.hase')} Herz.</li>
       <li>Gross (Zielwert ${w('tiere.zielGross')}): Sieg ${w('tiere.nahrungGross')} Nahrung, Niederlage −${w('tiere.schaden.baer')} Herzen.</li>
       <li>Sieg: Das Tier geht zurück in den Beutel, das Plättchen weg.</li>
-      <li>Niederlage: Schaden, die Figur zurück aufs Ausgangsfeld, der Zug endet, das Tier bleibt liegen.</li>
+      <li><span class="neu-v12">neu 10.11.</span> Niederlage gegen ein <b>grosses Tier</b>: Schaden, die Figur geht zurück aufs vorherige Feld, das Tier bleibt liegen, der Zug endet.</li>
+      <li><span class="neu-v12">neu 10.11.</span> Niederlage gegen ein <b>kleines Tier</b>: Schaden, das Tier verschwindet (zurück in den Beutel, das Plättchen weg), die Figur bleibt auf dem Feld stehen, der Zug endet.</li>
+      <li>Hinterhalt (Spezialkarte): Die Figur bleibt stehen, das Tier geht nach dem Kampf zurück in den Beutel.</li>
+      <li><span class="neu-v12">neu 10.11.</span> <b>Rauchbombe:</b> Wer einen Tierkampf oder ein Duell verliert und eine Rauchbombe hat, wird gefragt. Einsetzen = 0 Schaden, du wählst selbst ein sicheres Nachbarfeld (aufgedeckt, ohne Tier, ${rauchEnergie} Energie). Nach einem Tierkampf geht dein Zug danach weiter, das Tier bleibt liegen. Im Duell gibt es dann keine Beute.</li>
       <li>Ist der Beutel leer, bleibt das Tierfeld leer. Bei «Wildnis» kämpfen alle Tiere mit +1.</li>
     </ul>
     <div class="token-reihe">${[...Object.keys(t.klein), ...Object.keys(t.gross)].map((x) => `<figure><img src="${bild.tier(x)}" alt=""/><figcaption>${esc(TIER[x]?.name ?? x)}</figcaption></figure>`).join('')}</div>
@@ -232,6 +238,8 @@ export function regelnZeigen(el) {
       <li><span class="annahme">Annahme</span> Ein Hinterhalt mit kleinem Tier richtet den normalen Schaden eines kleinen Tiers an (kein Sonderfall mehr).</li>
       <li><span class="annahme">Annahme</span> Spieldauer «30 Tage» = 10 Ruhige Tage + 19 Ereignisse + Lava.</li>
       <li><span class="annahme">Annahme</span> Felsrutsch: Wer mehrere Waffen hat, verliert die schwächste.</li>
+      <li><span class="annahme">Annahme</span> Rauchbombe im Duell: Auch wenn der Angreifer sie einsetzt, endet sein Zug, weil nach jedem Duell der Zug endet.</li>
+      <li><span class="annahme">Annahme</span> «Sicheres Nachbarfeld» für die Rauchbombe = aufgedeckt, ohne Tier und ohne Spezialfeld.</li>
     </ul>
   </section>
 
