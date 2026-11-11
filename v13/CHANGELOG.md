@@ -75,7 +75,49 @@ Nur noch die vier verlangten Schalter: Ruhige Tage (7 + 12 oder 10 + 9), Tiersch
 
 ## 5. Messung
 
-MESSUNG
+150 Partien pro Zeile, Bots «normal» (Kommandozeile `node sim/cli.mjs --alle --partien 150`):
+
+| Modus | Spieler | Siegquote | Floss | Feuer | Wrack | Ø Siegtag | K.O.s pro Partie | Kompass gefunden (Ø Tag) | Nicht verloren | Plünderungen |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Koop | 2 | 42,7 % | 0,0 % | 42,0 % | 0,7 % | 14,7 | 0,37 | 2,0 % (14,0) | – | – |
+| Koop | 3 | 42,0 % | 0,0 % | 42,0 % | 0,0 % | 14,8 | 0,76 | 0,0 % | – | – |
+| Koop | 4 | 45,3 % | 0,0 % | 45,3 % | 0,0 % | 15,6 | 0,91 | 0,0 % | – | – |
+| Team | 4 | 75,3 % | 1,3 % | 51,3 % | 22,7 % | 15,9 | 0,44 | 10,7 % (12,4) | 2,7 % | 0,25 |
+| PvP | 2 | 67,3 % | 20,7 % | 0,0 % | 6,0 % | 14,0 | 0,84 | 94,7 % (6,6) | 0,0 % | 0,00 |
+| PvP | 3 | 57,3 % | 30,0 % | 0,0 % | 10,7 % | 15,2 | 1,43 | 99,3 % (5,8) | 0,7 % | 0,48 |
+| PvP | 4 | 42,7 % | 18,0 % | 0,0 % | 19,3 % | 15,3 | 1,81 | 100,0 % (5,6) | 0,0 % | 0,75 |
+
+Mit Bots «gut» (60 Partien pro Zeile): Koop 2/3/4 46,7 / 55,0 / 41,7 % · Team 63,3 % · PvP 2/3/4 60,0 / 36,7 / 31,7 %.
+
+Keine Partie ist hängen geblieben (0 Abbrüche am Zuglimit). Im PvP zählt «letzte/r Überlebende/r» als Sieg, darum ist die Siegquote höher als die Summe der Fluchtwege.
+
+**Erreichbarkeit der Fluchtwege** (je 40 Partien, die anderen beiden Wege ausgeschaltet, `node sim/messung-v13.mjs 40`):
+
+| Nur dieser Weg | Koop 2 | Koop 3 | Koop 4 | Team | PvP 2 | PvP 3 | PvP 4 |
+|---|---|---|---|---|---|---|---|
+| Floss | 40,0 % | 42,5 % | 20,0 % | 37,5 % | 32,5 % | 35,0 % | 25,0 % |
+| Feuer | 50,0 % | 40,0 % | 47,5 % | 75,0 % | 42,5 % | 45,0 % | 62,5 % |
+| Wrack | 32,5 % | 40,0 % | 57,5 % | 60,0 % | 32,5 % | 47,5 % | 62,5 % |
+
+Alle drei Fluchtwege sind in allen Modi und Spielerzahlen erreichbar.
+
+**Test-Schalter im A/B-Vergleich** (je 80 Partien, gleiche Seeds):
+
+| Schalter | Koop 3 Standard → Alternative | PvP 3 Standard → Alternative |
+|---|---|---|
+| Ruhige Tage (10 + 9) | 42,5 % → 46,3 % | 57,5 % → 57,5 % |
+| Tierschaden (0 / −1) | 42,5 % → 58,8 % (K.O. 0,68 → 0,21) | 57,5 % → 41,3 % |
+| +1 Energie pro Tag aus | 42,5 % → 6,3 % | 57,5 % → 22,5 % |
+| Spieldauer 30 Tage | 42,5 % → 66,3 % | 57,5 % → 87,5 % |
+
+**Auffällig**
+
+- Koop liegt rund 15 Prozentpunkte unter V12 (56,7 bis 60 %). Hauptgründe: Das Lagerfeuer heilt nicht mehr, und Feuer gehen nur auf leere Felder (Strandgut zuerst abbauen).
+- Die Koop-Bots wählen weiterhin fast nur die Feuerkette, Floss und Wrack kommen im Koop kaum vor. Allein gespielt sind beide erreichbar.
+- «+1 Energie pro Tag» bleibt der grösste Hebel. Ohne ihn ist Koop kaum zu gewinnen (6 %).
+- Im PvP sinkt die Siegquote mit milderem Tierschaden, weil mehr Figuren lange leben und kaum jemand als Letzte/r übrig bleibt.
+- «Nicht verloren» kommt selten vor (Team 2,7 %, PvP 3 0,7 %): Selten fliehen zwei Parteien in derselben Runde.
+- Die Zahlen messen die Regeln nur so weit, wie die Bots menschlich spielen.
 
 ## 6. Annahmen (im Regeln-Tab als «Annahme» markiert)
 
