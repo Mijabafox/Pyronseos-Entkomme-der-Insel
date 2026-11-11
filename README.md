@@ -20,6 +20,8 @@ Spielbare Versionen des Brettspiel-Prototyps. Bitte den Link nicht öffentlich t
 
 - **[Version 12 – Pyronesos, Regelstand 05.11.2026](https://mijabafox.github.io/Pyronseos-Entkomme-der-Insel/v12/)** (Team-Notizen: +1 Energie pro Tag, Kompass bergen gratis, Vulkanfelsen nur durch Betreten, Kompasskarte verdeckt und im Duell raubbar, Kompass für beide Flösse, Koop empfohlen; feste Startfelder, Test-Schalter, Regel-Chat)
 
+- **[Version 13 – Pyronesos, Regelstand 11.11.2026](https://mijabafox.github.io/Pyronseos-Entkomme-der-Insel/v13/)** (freier Zugablauf, nach dem Abbau nur noch craften, Routenkarte verdeckt vor der Person, Werkzeuge offen und max. 1 pro Sorte, Plündern in PvP und Team, Runde nach der ersten Flucht zu Ende spielen mit «Nicht verloren», Feuer und Shelter nur auf leeren Feldern, Startfelder 6/17/27/38)
+
 Dateien: Version 1 = `index.html`, Version 2 = `v2/index.html`, Version 3 = `v3/index.html`, Version 4 = `v4/index.html`, Version 5 = `v5/index.html`
 
 Version 6 = `v6/index.html`
@@ -35,3 +37,5 @@ Version 10 = `v10/index.html` (mit Bildern im selben Ordner)
 Version 11 = `v11/index.html` (Quellcode, Simulation und Tests im selben Ordner, siehe `v11/README.md`)
 
 Version 12 = `v12/index.html` (siehe `v12/README.md` und `v12/CHANGELOG.md`)
+
+Version 13 = `v13/index.html` (siehe `v13/README.md`, `v13/CHANGELOG.md` und `v13/ABGLEICH.md`)

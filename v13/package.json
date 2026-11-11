@@ -1,0 +1,12 @@
+{
+  "name": "pyronesos-v13",
+  "version": "13.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pyronesos Prototyp V13 «Entkomme der Insel»: Regel-Engine, Test-Schalter, Bots und Simulation",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "sim": "node sim/cli.mjs",
+    "serve": "python3 -m http.server 8013"
+  }
+}

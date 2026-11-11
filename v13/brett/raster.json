@@ -1,0 +1,34 @@
+{
+  "quelle": "brett.png",
+  "web": "brett-web.png",
+  "breite": 5496,
+  "hoehe": 5496,
+  "ueberlappung_px": 120,
+  "mitte_x": 2748.0,
+  "mitte_y": 2754.0,
+  "hex_groesse": 193.421,
+  "ausrichtung": "flat-top",
+  "kartenfelder": [
+    {
+      "name": "oben_rechts",
+      "x0": 4428,
+      "y0": 180,
+      "x1": 5315,
+      "y1": 779
+    },
+    {
+      "name": "unten_links",
+      "x0": 180,
+      "y0": 4716,
+      "x1": 1067,
+      "y1": 5315
+    },
+    {
+      "name": "unten_rechts",
+      "x0": 4428,
+      "y0": 4716,
+      "x1": 5315,
+      "y1": 5315
+    }
+  ]
+}

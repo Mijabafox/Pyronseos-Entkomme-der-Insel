@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="description" content="Pyronesos – Prototyp V13 «Entkomme der Insel»: Regel-Engine, Test-Schalter, menschennahe KI und Simulation" />
+    <title>Pyronesos · Version 13</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏝️</text></svg>" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header id="toolbar" class="toolbar">
+      <div class="tb-gruppe tb-titel">
+        <span class="tb-logo" title="Pyronesos – Entkomme der Insel · Version 13 · Regelstand 11.11.2026">🏝️<span class="tb-text"> Pyronesos · Version 13</span></span>
+        <span class="tb-modus" id="tbModus">Koop</span>
+        <nav class="tb-reiter" aria-label="Bereiche">
+          <button type="button" class="reiter-knopf an" data-reiter="spiel" title="Spiel"><span class="tb-symbol">🎲</span><span class="tb-text">Spiel</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="regler" title="Regler"><span class="tb-symbol">🎚️</span><span class="tb-text">Regler</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="karten" title="Karten"><span class="tb-symbol">🃏</span><span class="tb-text">Karten</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="sim" title="Simulation"><span class="tb-symbol">📊</span><span class="tb-text">Simulation</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="replay" title="Replay"><span class="tb-symbol">⏯</span><span class="tb-text">Replay</span></button>
+          <button type="button" class="reiter-knopf" data-reiter="regeln" title="Regeln"><span class="tb-symbol">📖</span><span class="tb-text">Regeln</span></button>
+        </nav>
+      </div>
+      <div class="tb-gruppe tb-tag" id="tbTag" hidden></div>
+      <div class="tb-gruppe tb-tempo" id="tbTempo"></div>
+      <div class="tb-gruppe tb-knoepfe" id="tbKnoepfe"></div>
+      <div class="tb-gruppe tb-rechts" id="tbRechts"></div>
+    </header>
+    <div id="hinweisleiste" class="hinweisleiste" hidden></div>
+    <main id="ansicht-spiel" class="spiel-ansicht"></main>
+    <main id="ansicht-regler" class="text-ansicht voll" hidden></main>
+    <main id="ansicht-karten" class="text-ansicht" hidden></main>
+    <main id="ansicht-sim" class="text-ansicht" hidden></main>
+    <main id="ansicht-replay" class="text-ansicht" hidden></main>
+    <main id="ansicht-regeln" class="text-ansicht" hidden></main>
+    <dialog id="dialog"></dialog>
+    <div id="buehne" class="buehne" hidden></div>
+    <script type="module" src="./ui/app.js"></script>
+  </body>
+</html>
